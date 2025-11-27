@@ -1,0 +1,257 @@
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from pathlib import Path
+import os
+import traceback
+
+# Import all API routers
+from app.api import (
+    packages,
+    room,
+    user,
+    auth,
+    frontend,
+    booking,
+    checkout,
+    dashboard,
+    employee,
+    expenses,
+    food_category,
+    food_item,
+    food_orders,
+    payment,
+    report,
+    reports,
+    role,
+    service,
+    attendance,
+)
+
+# Import inventory router separately to catch any import errors
+try:
+    from app.api import inventory
+    print("✅ Inventory router imported successfully")
+except Exception as e:
+    print(f"❌ ERROR importing inventory router: {e}")
+    import traceback
+    traceback.print_exc()
+    inventory = None
+from app.database import engine, Base
+
+# Create database tables
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI(
+    title="Resort Management System",
+    description="Complete resort management system with booking, payments, and customer management",
+    version="1.0.0",
+    redirect_slashes=False,  # Prevent automatic trailing slash redirects
+)
+
+# Exception handlers for proper error logging and responses
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """Handle HTTP exceptions with proper logging"""
+    import sys
+    print(f"HTTP Exception {exc.status_code} in {request.method} {request.url.path}: {exc.detail}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=exc.headers if hasattr(exc, 'headers') else None
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Handle validation errors with proper logging"""
+    import sys
+    print(f"Validation error in {request.method} {request.url.path}: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()}
+    )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch all other unhandled exceptions and return proper error responses"""
+    import sys
+    
+    # Log the full error with traceback
+    error_detail = f"Unhandled exception in {request.method} {request.url.path}: {str(exc)}\n{traceback.format_exc()}"
+    print(f"ERROR (global handler): {error_detail}")
+    sys.stderr.write(f"ERROR (global handler): {error_detail}\n")
+    
+    # Return 500 with error message
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal server error: {str(exc)}"}
+    )
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure this properly for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Static file directories
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Mount landing page static files
+landing_page_path = Path("../landingpage")
+if landing_page_path.exists():
+    app.mount("/landing", StaticFiles(directory="../landingpage"), name="landing")
+
+# Mount dashboard build files (React build)
+dashboard_build_path = Path("../dasboard/build")
+if dashboard_build_path.exists():
+    app.mount(
+        "/admin-static",
+        StaticFiles(directory="../dasboard/build/static"),
+        name="admin-static",
+    )
+
+# Mount user end build files
+userend_build_path = Path("../userend/build")
+if userend_build_path.exists():
+    app.mount(
+        "/user-static",
+        StaticFiles(directory="../userend/build/static"),
+        name="user-static",
+    )
+
+# API Routes
+app.include_router(auth.router, prefix="/api", tags=["Authentication"])
+app.include_router(user.router, prefix="/api", tags=["Users"])
+app.include_router(room.router, prefix="/api", tags=["Rooms"])
+app.include_router(packages.router, prefix="/api", tags=["Packages"])
+app.include_router(frontend.router, prefix="/api", tags=["Frontend"])
+app.include_router(booking.router, prefix="/api", tags=["Booking"])
+app.include_router(checkout.router, prefix="/api", tags=["Checkout"])
+app.include_router(dashboard.router, prefix="/api", tags=["Dashboard"])
+app.include_router(employee.router, prefix="/api", tags=["Employee"])
+app.include_router(expenses.router, prefix="/api", tags=["Expenses"])
+app.include_router(food_category.router, prefix="/api", tags=["Food Category"])
+app.include_router(food_item.router, prefix="/api", tags=["Food Items"])
+app.include_router(food_orders.router, prefix="/api", tags=["Food Orders"])
+app.include_router(payment.router, prefix="/api", tags=["Payment"])
+app.include_router(report.router, prefix="/api", tags=["Report"])
+app.include_router(reports.router, prefix="/api", tags=["Reports"])
+app.include_router(role.router, prefix="/api", tags=["Role"])
+app.include_router(service.router, prefix="/api", tags=["Service"])
+app.include_router(attendance.router, prefix="/api", tags=["Attendance"])
+
+# Include inventory router if it was imported successfully
+if inventory is not None:
+    try:
+        app.include_router(inventory.router, prefix="/api", tags=["Inventory"])
+        print(f"✅ Inventory router registered with {len(inventory.router.routes)} routes")
+    except Exception as e:
+        print(f"❌ ERROR registering inventory router: {e}")
+        import traceback
+        traceback.print_exc()
+else:
+    print("❌ Inventory router not imported, skipping registration")
+
+
+# Root route - Landing Page
+@app.get("/", response_class=HTMLResponse)
+async def landing_page():
+    """Serve the landing page at www.teqmates.com"""
+    landing_file = Path("../landingpage/index.html")
+    if landing_file.exists():
+        return FileResponse(landing_file)
+    return HTMLResponse(
+        "<h1>Welcome to TeqMates Resort</h1><p>Landing page not found</p>"
+    )
+
+
+# Admin Dashboard route
+@app.get("/admin", response_class=HTMLResponse)
+@app.get("/admin/{path:path}", response_class=HTMLResponse)
+async def admin_dashboard(request: Request, path: str = ""):
+    """Serve the React admin dashboard at www.teqmates.com/admin"""
+    dashboard_file = Path("../dasboard/build/index.html")
+    if dashboard_file.exists():
+        return FileResponse(dashboard_file)
+    return HTMLResponse("<h1>Admin Dashboard</h1><p>Dashboard not found</p>")
+
+
+# User/Resort route
+@app.get("/resort", response_class=HTMLResponse)
+@app.get("/resort/{path:path}", response_class=HTMLResponse)
+async def user_page(request: Request, path: str = ""):
+    """Serve the user interface at www.teqmates.com/resort"""
+    userend_dir = Path("../userend/build").resolve()
+    index_file = userend_dir / "index.html"
+
+    if path:
+        requested_path = (userend_dir / path).resolve()
+        if requested_path.is_file() and userend_dir in requested_path.parents:
+            return FileResponse(requested_path)
+
+    if index_file.exists():
+        return FileResponse(index_file)
+
+    # Fallback to a simple user interface
+    return HTMLResponse("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Resort User Interface</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            .container { max-width: 800px; margin: 0 auto; }
+            .header { background: #2c3e50; color: white; padding: 20px; border-radius: 8px; }
+            .content { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 20px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Resort User Interface</h1>
+                <p>Welcome to TeqMates Resort Management</p>
+            </div>
+            <div class="content">
+                <h2>Available Services</h2>
+                <ul>
+                    <li>Room Booking</li>
+                    <li>Package Selection</li>
+                    <li>Food Ordering</li>
+                    <li>Service Requests</li>
+                </ul>
+                <p>Please contact the administrator to set up the user interface.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """)
+
+
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring"""
+    return {"status": "healthy", "message": "Resort Management System is running"}
+
+
+# API documentation redirect
+@app.get("/api-docs")
+async def api_docs():
+    """Redirect to API documentation"""
+    return {"message": "API documentation available at /docs"}
+
+
+if __name__ == "__main__":
+    import uvicorn
+    import os
+
+    # Get port from environment or default to 8011 for Orchid
+    port = int(os.getenv("PORT", 8011))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)

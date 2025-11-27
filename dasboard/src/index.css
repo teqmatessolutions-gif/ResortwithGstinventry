@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import responsive styles */
+@import './styles/responsive.css';
+
+/* Eco-friendly theme button styles */
+:root {
+  --primary-button: #22c55e;
+  --primary-button-hover: #16a34a;
+  --border-color: #a7d4b8;
+}
+
+/* Apply eco-friendly colors to common button classes when eco-friendly theme is active */
+[data-theme="eco-friendly"] .btn-primary,
+body:has([data-theme="eco-friendly"]) .btn-primary {
+  background-color: var(--primary-button);
+  color: white;
+}
+
+[data-theme="eco-friendly"] .btn-primary:hover,
+body:has([data-theme="eco-friendly"]) .btn-primary:hover {
+  background-color: var(--primary-button-hover);
+}
+
+/* Make date inputs fully clickable - click anywhere to open calendar */
+input[type="date"] {
+  cursor: pointer;
+  position: relative;
+  padding-right: 2.5rem; /* Make room for calendar icon */
+}
+
+/* Style the calendar icon to be more prominent and clickable */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.5rem;
+  height: 1.5rem;
+  opacity: 0.6;
+  z-index: 1;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* For Firefox - make entire input clickable */
+input[type="date"]::-moz-focus-inner {
+  border: 0;
+}
+
+/* Ensure pointer cursor on hover */
+input[type="date"]:hover {
+  cursor: pointer;
+}
+
+input[type="date"]:focus {
+  cursor: text; /* Allow text cursor when focused for editing */
+}
+
+/* When focused via click, show pointer to indicate calendar can open */
+input[type="date"]:focus:hover {
+  cursor: pointer;
+}
