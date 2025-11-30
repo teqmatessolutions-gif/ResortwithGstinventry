@@ -1,1 +1,0 @@
-﻿// Vouchers.jsx placeholder
