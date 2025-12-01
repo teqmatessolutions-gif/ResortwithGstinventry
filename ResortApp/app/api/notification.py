@@ -19,6 +19,17 @@ def get_notifications(
     """Get all notifications"""
     return notification_crud.get_notifications(db, skip=skip, limit=limit, unread_only=unread_only)
 
+@router.get("", response_model=List[NotificationOut])  # Handle without trailing slash
+def get_notifications_no_slash(
+    skip: int = 0,
+    limit: int = 50,
+    unread_only: bool = False,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all notifications (no trailing slash)"""
+    return notification_crud.get_notifications(db, skip=skip, limit=limit, unread_only=unread_only)
+
 @router.get("/unread-count")
 def get_unread_count(db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     """Get count of unread notifications"""

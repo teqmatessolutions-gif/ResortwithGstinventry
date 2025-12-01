@@ -528,7 +528,13 @@ class LocationBase(BaseModel):
 
 
 class LocationCreate(LocationBase):
-    pass
+    @classmethod
+    def model_validate(cls, obj):
+        # Convert empty string to None for optional integer fields
+        if isinstance(obj, dict):
+            if obj.get('parent_location_id') == '':
+                obj['parent_location_id'] = None
+        return super().model_validate(obj)
 
 
 class LocationUpdate(BaseModel):
