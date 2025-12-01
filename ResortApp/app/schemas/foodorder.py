@@ -32,7 +32,9 @@ class FoodOrderOut(BaseModel):
     order_type: Optional[str] = "dine_in"
     delivery_request: Optional[str] = None
     items: List[FoodOrderItemOut]
-    guest_name: Optional[str] = None  # Added dynamically by CRUD function
+    guest_name: Optional[str] = None  # Populated from room's booking
+    employee_name: Optional[str] = None  # Populated from employee relationship
+    room_number: Optional[str] = None  # Populated from room relationship
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -45,6 +45,7 @@ def create_refill_service_request(db: Session, room_id: int, room_number: str, g
     This is automatically triggered when a room is checked out to replenish inventory items.
     Refill requirements are calculated from the checkout consumables audit.
     """
+    import json
     refill_items = []
     
     # Get refill requirements from checkout verification if checkout_id is provided
@@ -74,6 +75,7 @@ def create_refill_service_request(db: Session, room_id: int, room_number: str, g
                         refill_items.append({
                             "item_id": item_id,
                             "item_name": inv_item.name,
+                            "item_code": inv_item.item_code,
                             "quantity_to_refill": actual_consumed,
                             "unit": inv_item.unit or "pcs"
                         })
@@ -98,6 +100,7 @@ def create_refill_service_request(db: Session, room_id: int, room_number: str, g
         employee_id=None,  # Will be assigned later
         request_type="refill",
         description=" | ".join(description_parts),
+        refill_data=json.dumps(refill_items) if refill_items else None,  # Store as JSON
         status="pending"
     )
     db.add(request)
@@ -124,8 +127,8 @@ def get_service_requests(db: Session, skip: int = 0, limit: int = 100, status: O
             req.food_order_status = req.food_order.status
         if req.room:
             req.room_number = req.room.number
-        if req.employee:
-            req.employee_name = req.employee.name
+        # Always set employee_name, even if None
+        req.employee_name = req.employee.name if req.employee else None
     
     return requests
 
@@ -142,8 +145,8 @@ def get_service_request(db: Session, request_id: int):
             request.food_order_status = request.food_order.status
         if request.room:
             request.room_number = request.room.number
-        if request.employee:
-            request.employee_name = request.employee.name
+        # Always set employee_name, even if None
+        request.employee_name = request.employee.name if request.employee else None
     
     return request
 

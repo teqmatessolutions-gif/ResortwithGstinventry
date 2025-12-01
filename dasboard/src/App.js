@@ -22,6 +22,7 @@ import GuestProfile from "./pages/GuestProfile.jsx";
 import UserHistory from "./pages/UserHistory.jsx";
 import EmployeeManagement from "./pages/EmployeeManagement.jsx";
 import Inventory from "./pages/Inventory.jsx";
+import Settings from "./pages/Settings.jsx";
 
 const getRouterBasename = () => {
   if (typeof window === "undefined") {
@@ -185,6 +186,14 @@ function App() {
           element={
             <ProtectedRoute requiredPermission="/inventory">
               <Inventory />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute requiredPermission="/settings">
+              <Settings />
             </ProtectedRoute>
           }
         />

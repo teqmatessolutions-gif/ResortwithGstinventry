@@ -27,7 +27,9 @@ class CheckoutRequest(Base):
     inventory_checked = Column(Boolean, default=False)
     inventory_checked_by = Column(String, nullable=True)
     inventory_checked_at = Column(DateTime, nullable=True)
+
     inventory_notes = Column(Text, nullable=True)
+    inventory_data = Column(JSON, nullable=True)  # Stores verified inventory items (used/missing)
     
     # Completion
     completed_at = Column(DateTime, nullable=True)

@@ -84,16 +84,46 @@ def create_food_order(db: Session, order_data: FoodOrderCreate):
     return order
 
 def get_food_orders(db: Session, skip: int = 0, limit: int = 100):
+    from sqlalchemy.orm import joinedload
+    
     # Cap limit to prevent performance issues
     if limit > 200:
         limit = 200
     if limit < 1:
         limit = 20
     
-    # Ultra-simple query - no eager loading, no complex joins
-    # Just get the orders and return them - let the API layer handle serialization
+    # Eager load relationships so guest/employee names are available
     try:
-        orders = db.query(FoodOrder).order_by(FoodOrder.id.desc()).offset(skip).limit(limit).all()
+        orders = (
+            db.query(FoodOrder)
+            .options(
+                joinedload(FoodOrder.employee),  # Load employee for employee name
+                joinedload(FoodOrder.room),      # Load room for room number
+                joinedload(FoodOrder.items).joinedload(FoodOrderItem.food_item)  # Load items and food details
+            )
+            .order_by(FoodOrder.id.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+        
+        # Populate computed fields
+        for order in orders:
+            # Set employee name
+            if order.employee:
+                order.employee_name = order.employee.name
+            else:
+                order.employee_name = None
+            
+            # Set room number
+            if order.room:
+                order.room_number = order.room.number
+            else:
+                order.room_number = None
+            
+            # Set guest name from room's active booking
+            order.guest_name = get_guest_for_room(order.room_id, db)
+        
         return orders
     except Exception as e:
         print(f"[ERROR] Error in get_food_orders: {str(e)}")

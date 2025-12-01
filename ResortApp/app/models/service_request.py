@@ -13,6 +13,7 @@ class ServiceRequest(Base):
     request_type = Column(String, default="delivery")  # "delivery" or other types
     description = Column(Text, nullable=True)  # Delivery request details
     status = Column(String, default="pending")  # "pending", "in_progress", "completed", "cancelled"
+    refill_data = Column(Text, nullable=True)  # JSON string for refill items data
     created_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
     

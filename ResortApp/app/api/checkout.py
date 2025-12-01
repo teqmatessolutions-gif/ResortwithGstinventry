@@ -13,7 +13,7 @@ from app.models.user import User
 from app.models.foodorder import FoodOrder, FoodOrderItem
 from app.models.service import AssignedService, Service
 from app.models.checkout import Checkout, CheckoutVerification, CheckoutPayment, CheckoutRequest as CheckoutRequestModel
-from app.schemas.checkout import BillSummary, BillBreakdown, CheckoutFull, CheckoutSuccess, CheckoutRequest
+from app.schemas.checkout import BillSummary, BillBreakdown, CheckoutFull, CheckoutSuccess, CheckoutRequest, InventoryCheckRequest
 from app.utils.checkout_helpers import (
     calculate_late_checkout_fee, process_consumables_audit, process_asset_damage_check,
     deduct_room_consumables, trigger_linen_cycle, create_checkout_verification,
@@ -261,17 +261,23 @@ def get_checkout_request_inventory_details(
     try:
         from app.models.inventory import InventoryItem, StockIssue, StockIssueDetail
         
-        # Get all items for this location
-        items = db.query(InventoryItem).filter(
-            InventoryItem.location_id == room.inventory_location_id
-        ).all()
+        # Get all items that have been issued to this location
+        # Query through StockIssueDetail to find items at this location
+        issued_items = (
+            db.query(InventoryItem)
+            .join(StockIssueDetail, StockIssueDetail.item_id == InventoryItem.id)
+            .join(StockIssue, StockIssue.id == StockIssueDetail.issue_id)
+            .filter(StockIssue.destination_location_id == room.inventory_location_id)
+            .distinct()
+            .all()
+        )
         
         items_list = []
-        for item in items:
+        for item in issued_items:
             # Get issue details for this item at this location
             issue_details = db.query(StockIssueDetail).join(StockIssue).filter(
                 StockIssueDetail.item_id == item.id,
-                StockIssue.location_id == room.inventory_location_id
+                StockIssue.destination_location_id == room.inventory_location_id
             ).all()
             
             # Calculate complimentary and payable quantities
@@ -321,13 +327,17 @@ def get_checkout_request_inventory_details(
 @router.post("/checkout-request/{request_id}/check-inventory")
 def check_inventory_for_checkout(
     request_id: int,
-    inventory_notes: Optional[str] = None,
+    payload: InventoryCheckRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
     Mark inventory as checked and complete the checkout request.
+    Stores used/missing items in inventory_data.
+    Calculates charges for missing items.
     """
+    from app.models.inventory import InventoryItem
+    
     checkout_request = db.query(CheckoutRequestModel).filter(CheckoutRequestModel.id == request_id).first()
     if not checkout_request:
         raise HTTPException(status_code=404, detail="Checkout request not found")
@@ -338,7 +348,43 @@ def check_inventory_for_checkout(
     checkout_request.inventory_checked = True
     checkout_request.inventory_checked_by = getattr(current_user, 'name', None) or getattr(current_user, 'email', None) or "system"
     checkout_request.inventory_checked_at = datetime.utcnow()
-    checkout_request.inventory_notes = inventory_notes
+    checkout_request.inventory_notes = payload.inventory_notes
+    
+    # Store inventory data and calculate charges for missing items
+    total_missing_charges = 0.0
+    missing_items_details = []
+    
+    if payload.items:
+        inventory_data_with_charges = []
+        
+        for item in payload.items:
+            item_dict = item.dict()
+            
+            # Calculate charge for missing items
+            if item.missing_qty and item.missing_qty > 0:
+                inv_item = db.query(InventoryItem).filter(InventoryItem.id == item.item_id).first()
+                if inv_item:
+                    if inv_item.price:
+                        item_charge = float(inv_item.price) * item.missing_qty
+                        total_missing_charges += item_charge
+                        item_dict['missing_item_charge'] = item_charge
+                        item_dict['unit_price'] = float(inv_item.price)
+                        
+                        missing_items_details.append({
+                            "item_name": inv_item.name,
+                            "item_code": inv_item.item_code,
+                            "missing_qty": item.missing_qty,
+                            "unit_price": float(inv_item.price),
+                            "total_charge": item_charge
+                        })
+                    
+                    item_dict['item_name'] = inv_item.name
+                    item_dict['item_code'] = inv_item.item_code
+            
+            inventory_data_with_charges.append(item_dict)
+        
+        checkout_request.inventory_data = inventory_data_with_charges
+        
     checkout_request.status = "completed"
     checkout_request.completed_at = datetime.utcnow()
     
@@ -349,7 +395,9 @@ def check_inventory_for_checkout(
         "message": "Inventory checked and checkout request completed successfully",
         "request_id": checkout_request.id,
         "status": checkout_request.status,
-        "inventory_checked": True
+        "inventory_checked": True,
+        "missing_items_charge": total_missing_charges,
+        "missing_items_details": missing_items_details
     }
 
 
@@ -1081,30 +1129,53 @@ def _calculate_bill_for_single_room(db: Session, room_number: str):
         # For regular bookings: calculate room charges as days * room price
         charges.room_charges = (room.price or 0) * stay_days
     
-    # Get food and service charges for THIS ROOM ONLY
+    # Use actual check-in timestamp if available, otherwise fall back to check-in date at 00:00:00
+    # This provides strict bill scoping by check-in date AND time
+    if booking.checked_in_at:
+        check_in_datetime = booking.checked_in_at
+        print(f"[DEBUG] Using actual check-in timestamp: {check_in_datetime}")
+    else:
+        # Fallback for legacy bookings without checked_in_at timestamp
+        check_in_datetime = datetime.combine(booking.check_in, datetime.min.time())
+        print(f"[DEBUG] Using check-in date (legacy): {check_in_datetime}")
+
+    # Get food and service charges for THIS ROOM ONLY, filtered by check-in datetime
     # Include ALL food orders (both billed and unbilled) - show paid ones with zero amount
     all_food_order_items = (db.query(FoodOrderItem)
                            .join(FoodOrder)
                            .options(joinedload(FoodOrderItem.food_item), joinedload(FoodOrderItem.order))
-                           .filter(FoodOrder.room_id == room.id)
+                           .filter(
+                               FoodOrder.room_id == room.id,
+                               FoodOrder.created_at >= check_in_datetime
+                           )
                            .all())
     
-    # Separate billed and unbilled items
-    # Unbilled: billing_status is None, "unbilled", or anything other than "billed"
-    # Billed: billing_status is explicitly "billed"
+    # Separate food orders by billing status:
+    # - Unbilled: billing_status is None, "unbilled" (add to bill)
+    # - Paid: billing_status is "paid" (show as paid, don't add to bill)
+    # - Billed: billing_status is "billed" (already billed, show as paid)
     unbilled_food_order_items = [item for item in all_food_order_items 
-                                 if not item.order or item.order.billing_status != "billed"]
+                                 if not item.order or item.order.billing_status == "unbilled" or item.order.billing_status is None]
+    paid_food_order_items = [item for item in all_food_order_items 
+                            if item.order and item.order.billing_status == "paid"]
     billed_food_order_items = [item for item in all_food_order_items 
                                if item.order and item.order.billing_status == "billed"]
     
-    unbilled_services = db.query(AssignedService).options(joinedload(AssignedService.service)).filter(AssignedService.room_id == room.id, AssignedService.billing_status == "unbilled").all()
+    # Get ALL unbilled services for this room
+    # Note: Services can be pre-assigned before check-in, so we don't filter by assigned_at
+    # We only filter by billing_status to avoid double-billing
+    unbilled_services = db.query(AssignedService).options(joinedload(AssignedService.service)).filter(
+        AssignedService.room_id == room.id, 
+        AssignedService.billing_status == "unbilled"
+    ).all()
     
     # Calculate charges: only unbilled items contribute to charges
     charges.food_charges = sum(item.quantity * item.food_item.price for item in unbilled_food_order_items if item.food_item)
     charges.service_charges = sum(ass.service.charges for ass in unbilled_services)
     
-    # Include ALL food items in the list - paid ones with zero amount
+    # Include ALL food items in the list with payment status
     charges.food_items = []
+    
     # Add unbilled items with their actual amounts
     for item in unbilled_food_order_items:
         if item.food_item:
@@ -1112,19 +1183,98 @@ def _calculate_bill_for_single_room(db: Session, room_number: str):
                 "item_name": item.food_item.name, 
                 "quantity": item.quantity, 
                 "amount": item.quantity * item.food_item.price,
-                "is_paid": False
+                "is_paid": False,
+                "payment_status": "Unpaid"
             })
-    # Add billed items with zero amount
+    
+    # Add paid items (paid at delivery) with payment details
+    for item in paid_food_order_items:
+        if item.food_item and item.order:
+            charges.food_items.append({
+                "item_name": item.food_item.name, 
+                "quantity": item.quantity, 
+                "amount": 0.0,  # Don't add to bill
+                "is_paid": True,
+                "payment_status": f"PAID ({item.order.payment_method or 'cash'})",
+                "payment_method": item.order.payment_method,
+                "payment_time": item.order.payment_time.isoformat() if item.order.payment_time else None,
+                "gst_amount": item.order.gst_amount,
+                "total_with_gst": item.order.total_with_gst
+            })
+    
+    # Add billed items (already in previous bills)
     for item in billed_food_order_items:
         if item.food_item:
             charges.food_items.append({
                 "item_name": item.food_item.name, 
                 "quantity": item.quantity, 
                 "amount": 0.0,
-                "is_paid": True
+                "is_paid": True,
+                "payment_status": "Previously Billed"
             })
     
     charges.service_items = [{"service_name": ass.service.name, "charges": ass.service.charges} for ass in unbilled_services]
+    
+    # Calculate Consumables Charges from CheckoutRequest
+    from app.models.inventory import InventoryItem
+    
+    checkout_request = None
+    if is_package:
+        checkout_request = db.query(CheckoutRequestModel).filter(
+            CheckoutRequestModel.package_booking_id == booking.id,
+            CheckoutRequestModel.room_number == room_number,
+            CheckoutRequestModel.status == "completed"
+        ).order_by(CheckoutRequestModel.id.desc()).first()
+    else:
+        checkout_request = db.query(CheckoutRequestModel).filter(
+            CheckoutRequestModel.booking_id == booking.id,
+            CheckoutRequestModel.room_number == room_number,
+            CheckoutRequestModel.status == "completed"
+        ).order_by(CheckoutRequestModel.id.desc()).first()
+        
+    if checkout_request and checkout_request.inventory_data:
+        for item_data in checkout_request.inventory_data:
+            item_id = item_data.get('item_id')
+            used_qty = float(item_data.get('used_qty', 0))
+            missing_qty = float(item_data.get('missing_qty', 0))
+            missing_item_charge = item_data.get('missing_item_charge', 0)
+            
+            # Add charges for used consumables (over complimentary limit)
+            if used_qty > 0:
+                inv_item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+                if inv_item and inv_item.is_sellable_to_guest:
+                    limit = inv_item.complimentary_limit or 0
+                    chargeable_qty = max(0, used_qty - limit)
+                    
+                    if chargeable_qty > 0:
+                        price = inv_item.selling_price or inv_item.unit_price or 0
+                        amount = chargeable_qty * price
+                        charges.consumables_charges = (charges.consumables_charges or 0) + amount
+                        
+                        charges.consumables_items.append({
+                            "item_id": item_id,
+                            "item_name": inv_item.name,
+                            "actual_consumed": used_qty,
+                            "complimentary_limit": limit,
+                            "charge_per_unit": price,
+                            "total_charge": amount
+                        })
+            
+            # Add charges for missing/damaged items
+            if missing_qty > 0 and missing_item_charge > 0:
+                item_name = item_data.get('item_name', f'Item #{item_id}')
+                unit_price = item_data.get('unit_price', 0)
+                
+                charges.consumables_charges = (charges.consumables_charges or 0) + missing_item_charge
+                
+                charges.consumables_items.append({
+                    "item_id": item_id,
+                    "item_name": f"{item_name} (Missing/Damaged)",
+                    "actual_consumed": missing_qty,
+                    "complimentary_limit": 0,
+                    "charge_per_unit": unit_price,
+                    "total_charge": missing_item_charge
+                })
     
     # Calculate GST
     # Room charges: 5% GST if < 5000, 12% GST if 5000-7500, 18% GST if > 7500
@@ -1161,16 +1311,27 @@ def _calculate_bill_for_single_room(db: Session, room_number: str):
     food_charge_amount = charges.food_charges or 0
     if food_charge_amount > 0:
         charges.food_gst = food_charge_amount * 0.05
+        
+    # Service GST: Calculate based on individual service rates
+    charges.service_gst = 0.0
+    for ass in unbilled_services:
+        gst_rate = getattr(ass.service, 'gst_rate', 0.18) or 0.18
+        charges.service_gst += ass.service.charges * gst_rate
+        
+    # Consumables GST: 5%
+    if charges.consumables_charges and charges.consumables_charges > 0:
+        charges.consumables_gst = charges.consumables_charges * 0.05
     
     # Total GST
-    charges.total_gst = (charges.room_gst or 0) + (charges.food_gst or 0) + (charges.package_gst or 0)
+    charges.total_gst = (charges.room_gst or 0) + (charges.food_gst or 0) + (charges.service_gst or 0) + (charges.package_gst or 0) + (charges.consumables_gst or 0)
     
     # Total due (subtotal before GST)
     charges.total_due = sum([
         charges.room_charges or 0, 
         charges.food_charges or 0, 
         charges.service_charges or 0, 
-        charges.package_charges or 0
+        charges.package_charges or 0,
+        charges.consumables_charges or 0
     ])
     
     # Add advance deposit info to charges
@@ -1326,6 +1487,47 @@ def _calculate_bill_for_entire_booking(db: Session, room_number: str):
     
     charges.service_items = [{"service_name": ass.service.name, "charges": ass.service.charges} for ass in unbilled_services]
 
+    # Calculate Consumables Charges from CheckoutRequest
+    from app.models.inventory import InventoryItem
+    
+    checkout_requests = []
+    if is_package:
+        checkout_requests = db.query(CheckoutRequestModel).filter(
+            CheckoutRequestModel.package_booking_id == booking.id,
+            CheckoutRequestModel.status == "completed"
+        ).all()
+    else:
+        checkout_requests = db.query(CheckoutRequestModel).filter(
+            CheckoutRequestModel.booking_id == booking.id,
+            CheckoutRequestModel.status == "completed"
+        ).all()
+        
+    for checkout_request in checkout_requests:
+        if checkout_request.inventory_data:
+            for item_data in checkout_request.inventory_data:
+                item_id = item_data.get('item_id')
+                used_qty = float(item_data.get('used_qty', 0))
+                
+                if used_qty > 0:
+                    inv_item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+                    if inv_item and inv_item.is_sellable_to_guest:
+                        limit = inv_item.complimentary_limit or 0
+                        chargeable_qty = max(0, used_qty - limit)
+                        
+                        if chargeable_qty > 0:
+                            price = inv_item.selling_price or inv_item.unit_price or 0
+                            amount = chargeable_qty * price
+                            charges.consumables_charges = (charges.consumables_charges or 0) + amount
+                            
+                            charges.consumables_items.append({
+                                "item_id": item_id,
+                                "item_name": inv_item.name,
+                                "actual_consumed": used_qty,
+                                "complimentary_limit": limit,
+                                "charge_per_unit": price,
+                                "total_charge": amount
+                            })
+
     # Calculate GST
     # Room charges: 5% GST if < 5000, 12% GST if 5000-7500, 18% GST if > 7500
     # FIX: Calculate GST for each room individually based on its nightly rate
@@ -1365,16 +1567,27 @@ def _calculate_bill_for_entire_booking(db: Session, room_number: str):
     food_charge_amount = charges.food_charges or 0
     if food_charge_amount > 0:
         charges.food_gst = food_charge_amount * 0.05
+        
+    # Service GST: Calculate based on individual service rates
+    charges.service_gst = 0.0
+    for ass in unbilled_services:
+        gst_rate = getattr(ass.service, 'gst_rate', 0.18) or 0.18
+        charges.service_gst += ass.service.charges * gst_rate
+        
+    # Consumables GST: 5%
+    if charges.consumables_charges and charges.consumables_charges > 0:
+        charges.consumables_gst = charges.consumables_charges * 0.05
     
     # Total GST
-    charges.total_gst = (charges.room_gst or 0) + (charges.food_gst or 0) + (charges.package_gst or 0)
-
+    charges.total_gst = (charges.room_gst or 0) + (charges.food_gst or 0) + (charges.service_gst or 0) + (charges.package_gst or 0) + (charges.consumables_gst or 0)
+    
     # Total due (subtotal before GST)
     charges.total_due = sum([
-        charges.room_charges or 0,
-        charges.food_charges or 0,
-        charges.service_charges or 0,
-        charges.package_charges or 0
+        charges.room_charges or 0, 
+        charges.food_charges or 0, 
+        charges.service_charges or 0, 
+        charges.package_charges or 0,
+        charges.consumables_charges or 0
     ])
     
     # Add advance deposit info to charges
@@ -1798,7 +2011,37 @@ def process_booking_checkout(room_number: str, request: CheckoutRequest, db: Ses
             })
             
             # 12. Inventory Triggers
-            if request.room_verifications:
+            # Check for CheckoutRequest first
+            checkout_request = None
+            if is_package:
+                checkout_request = db.query(CheckoutRequestModel).filter(
+                    CheckoutRequestModel.package_booking_id == booking.id,
+                    CheckoutRequestModel.status == "completed"
+                ).order_by(CheckoutRequestModel.id.desc()).first()
+            else:
+                checkout_request = db.query(CheckoutRequestModel).filter(
+                    CheckoutRequestModel.booking_id == booking.id,
+                    CheckoutRequestModel.status == "completed"
+                ).order_by(CheckoutRequestModel.id.desc()).first()
+
+            if checkout_request and checkout_request.inventory_data:
+                # Convert inventory_data to list of objects with item_id and actual_consumed
+                class SimpleConsumable:
+                    def __init__(self, item_id, actual_consumed):
+                        self.item_id = item_id
+                        self.actual_consumed = actual_consumed
+                
+                consumables_list = []
+                for item in checkout_request.inventory_data:
+                    if float(item.get('used_qty', 0)) > 0:
+                        consumables_list.append(SimpleConsumable(item.get('item_id'), float(item.get('used_qty', 0))))
+                
+                if consumables_list:
+                    deduct_room_consumables(
+                        db, room.id, consumables_list, 
+                        new_checkout.id, current_user.id if current_user else None
+                    )
+            elif request.room_verifications:
                 room_verification = next(
                     (rv for rv in request.room_verifications if rv.room_number == room.number),
                     None
@@ -1809,6 +2052,26 @@ def process_booking_checkout(room_number: str, request: CheckoutRequest, db: Ses
                         db, room.id, room_verification.consumables, 
                         new_checkout.id, current_user.id if current_user else None
                     )
+
+            # Clear remaining consumables from room inventory
+            if room.inventory_location_id:
+                from app.models.inventory import InventoryItem, StockIssue, StockIssueDetail
+                # Find all sellable items that have been issued to this room location
+                room_items = (
+                    db.query(InventoryItem)
+                    .join(StockIssueDetail, StockIssueDetail.item_id == InventoryItem.id)
+                    .join(StockIssue, StockIssue.id == StockIssueDetail.issue_id)
+                    .filter(
+                        StockIssue.destination_location_id == room.inventory_location_id,
+                        InventoryItem.is_sellable_to_guest == True
+                    )
+                    .distinct()
+                    .all()
+                )
+                
+                for item in room_items:
+                    # Reset stock to 0
+                    item.current_stock = 0.0
             
             # Trigger linen cycle (move bed sheets/towels to laundry)
             trigger_linen_cycle(db, room.id, new_checkout.id)
@@ -2070,6 +2333,36 @@ def process_booking_checkout(room_number: str, request: CheckoutRequest, db: Ses
             total_asset_damage_charges = 0.0
             total_key_card_fee = 0.0
             
+            # Check for CheckoutRequest
+            checkout_requests = []
+            if is_package:
+                checkout_requests = db.query(CheckoutRequestModel).filter(
+                    CheckoutRequestModel.package_booking_id == booking.id,
+                    CheckoutRequestModel.status == "completed"
+                ).all()
+            else:
+                checkout_requests = db.query(CheckoutRequestModel).filter(
+                    CheckoutRequestModel.booking_id == booking.id,
+                    CheckoutRequestModel.status == "completed"
+                ).all()
+
+            for checkout_request in checkout_requests:
+                if checkout_request.inventory_data:
+                    from app.models.inventory import InventoryItem
+                    for item_data in checkout_request.inventory_data:
+                        item_id = item_data.get('item_id')
+                        used_qty = float(item_data.get('used_qty', 0))
+                        
+                        if used_qty > 0:
+                            inv_item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+                            if inv_item and inv_item.is_sellable_to_guest:
+                                limit = inv_item.complimentary_limit or 0
+                                chargeable_qty = max(0, used_qty - limit)
+                                
+                                if chargeable_qty > 0:
+                                    price = inv_item.selling_price or inv_item.unit_price or 0
+                                    total_consumables_charges += chargeable_qty * price
+            
             if request.room_verifications:
                 for room_verification in request.room_verifications:
                     # Find the room
@@ -2168,6 +2461,55 @@ def process_booking_checkout(room_number: str, request: CheckoutRequest, db: Ses
                     room_obj = next((r for r in all_rooms if r.number == room_verification.room_number), None)
                     if room_obj:
                         create_checkout_verification(db, new_checkout.id, room_verification, room_obj.id)
+                        # Deduct consumables
+                        deduct_room_consumables(
+                            db, room_obj.id, room_verification.consumables, 
+                            new_checkout.id, current_user.id if current_user else None
+                        )
+            
+            # Deduct from CheckoutRequest if available
+            for checkout_request in checkout_requests:
+                if checkout_request.inventory_data:
+                    # Find the room for this request
+                    room_obj = next((r for r in all_rooms if r.number == checkout_request.room_number), None)
+                    if room_obj:
+                         # Convert inventory_data to list of objects with item_id and actual_consumed
+                        class SimpleConsumable:
+                            def __init__(self, item_id, actual_consumed):
+                                self.item_id = item_id
+                                self.actual_consumed = actual_consumed
+                        
+                        consumables_list = []
+                        for item in checkout_request.inventory_data:
+                            if float(item.get('used_qty', 0)) > 0:
+                                consumables_list.append(SimpleConsumable(item.get('item_id'), float(item.get('used_qty', 0))))
+                        
+                        if consumables_list:
+                            deduct_room_consumables(
+                                db, room_obj.id, consumables_list, 
+                                new_checkout.id, current_user.id if current_user else None
+                            )
+            
+            # Clear remaining consumables from room inventory
+            from app.models.inventory import InventoryItem, Location, StockIssue, StockIssueDetail
+            for room in all_rooms:
+                if room.inventory_location_id:
+                    # Find all sellable items that have been issued to this room location
+                    room_items = (
+                        db.query(InventoryItem)
+                        .join(StockIssueDetail, StockIssueDetail.item_id == InventoryItem.id)
+                        .join(StockIssue, StockIssue.id == StockIssueDetail.issue_id)
+                        .filter(
+                            StockIssue.destination_location_id == room.inventory_location_id,
+                            InventoryItem.is_sellable_to_guest == True
+                        )
+                        .distinct()
+                        .all()
+                    )
+                    
+                    for item in room_items:
+                        # Reset stock to 0
+                        item.current_stock = 0.0
             
             # 9. Process split payments
             if request.split_payments:

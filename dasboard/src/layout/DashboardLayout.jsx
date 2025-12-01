@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { Link, useLocation, Navigate } from "react-router-dom";
 import { AnimatePresence, motion, m } from "framer-motion";
-import { 
+import {
   Home,
   Users,
   BedDouble,
@@ -136,12 +136,12 @@ export const ProtectedRoute = ({ children, requiredPermission }) => {
     // Redirect to dashboard with a message instead of showing blank page
     return <Navigate to="/dashboard" replace />;
   }
-  
+
   // Ensure children are rendered properly
   if (!children) {
     return <Navigate to="/dashboard" replace />;
   }
-  
+
   return <>{children}</>;
 };
 
@@ -242,6 +242,7 @@ export default function DashboardLayout({ children }) {
     { label: "User History", icon: <Users size={18} />, to: "/user-history", roles: ["admin", "manager"] },
     { label: "Employee Mgt", icon: <Briefcase size={18} />, to: "/employee-management", roles: ["admin", "manager"] },
     { label: "Inventory", icon: <Warehouse size={18} />, to: "/inventory", roles: ["admin", "manager"] },
+    { label: "Settings", icon: <Settings size={18} />, to: "/settings", roles: ["admin"] },
   ];
 
   const menuItems = allMenuItems.filter((item) => {
@@ -263,7 +264,7 @@ export default function DashboardLayout({ children }) {
     >
       {/* Mobile overlay for sidebar */}
       {!collapsed && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
           onClick={() => setCollapsed(true)}
         />
@@ -301,11 +302,9 @@ export default function DashboardLayout({ children }) {
 
         {/* Sidebar container */}
         <div
-          className={`shadow-xl transition-all duration-300 ${
-            collapsed ? "w-16 lg:w-20" : "w-72"
-          } flex flex-col flex-shrink-0 z-50 rounded-r-2xl overflow-hidden fixed lg:relative h-full ${
-            collapsed ? "-translate-x-full lg:translate-x-0" : "translate-x-0"
-          }`}
+          className={`shadow-xl transition-all duration-300 ${collapsed ? "w-16 lg:w-20" : "w-72"
+            } flex flex-col flex-shrink-0 z-50 rounded-r-2xl overflow-hidden fixed lg:relative h-full ${collapsed ? "-translate-x-full lg:translate-x-0" : "translate-x-0"
+            }`}
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
           {/* Header section with logo, app name, and menu toggle */}
@@ -328,51 +327,51 @@ export default function DashboardLayout({ children }) {
 
           {/* Theme Switcher UI with image previews */}
           <div className={`p-4 transition-all duration-300 flex justify-center gap-2 border-b`} style={{ borderColor: 'var(--accent-bg)' }}>
-              <motion.button
-                  animate={{ scale: currentTheme === 'orchid' ? 1.15 : 1, y: currentTheme === 'orchid' ? -2 : 0 }}
-                  whileHover={{ scale: 1.2, y: -2 }} whileTap={{ scale: 1.1 }} transition={{ type: 'spring', stiffness: 300 }}
-                  className={`w-8 h-8 rounded-full overflow-hidden ${currentTheme === 'orchid' ? 'shadow-lg border-2 border-[#8bc34a]' : ''}`}
-                  onClick={() => { setCurrentTheme('orchid'); applyTheme('orchid'); }}
-                  title="Orchid"
-              >
-                <img src={orchidLogo} alt="Orchid Theme" className="w-full h-full object-cover"/>
-              </motion.button>
-              <motion.button
-                  animate={{ scale: currentTheme === 'eco-friendly' ? 1.15 : 1, y: currentTheme === 'eco-friendly' ? -2 : 0 }}
-                  whileHover={{ scale: 1.2, y: -2 }} whileTap={{ scale: 1.1 }} transition={{ type: 'spring', stiffness: 300 }}
-                  className={`w-8 h-8 rounded-full overflow-hidden ${currentTheme === 'eco-friendly' ? 'shadow-lg border-2 border-green-500' : ''}`}
-                  onClick={() => { setCurrentTheme('eco-friendly'); applyTheme('eco-friendly'); }}
-                  title="Eco-Friendly"
-              >
-                <div className="w-full h-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white font-bold text-xs">🌿</div>
-              </motion.button>
-              <motion.button
-                  animate={{ scale: currentTheme === 'platinum' ? 1.15 : 1, y: currentTheme === 'platinum' ? -2 : 0 }}
-                  whileHover={{ scale: 1.2, y: -2 }} whileTap={{ scale: 1.1 }} transition={{ type: 'spring', stiffness: 300 }}
-                  className={`w-8 h-8 rounded-full overflow-hidden ${currentTheme === 'platinum' ? 'shadow-lg border-2 border-gray-400' : ''}`}
-                  onClick={() => { setCurrentTheme('platinum'); applyTheme('platinum'); }}
-                  title="Platinum"
-              >
-                <img src="https://placehold.co/32x32/f4f7f9/2c3e50?text=P" alt="Platinum Theme" className="w-full h-full object-cover"/>
-              </motion.button>
-              <motion.button
-                  animate={{ scale: currentTheme === 'onyx' ? 1.15 : 1, y: currentTheme === 'onyx' ? -2 : 0 }}
-                  whileHover={{ scale: 1.2, y: -2 }} whileTap={{ scale: 1.1 }} transition={{ type: 'spring', stiffness: 300 }}
-                  className={`w-8 h-8 rounded-full overflow-hidden ${currentTheme === 'onyx' ? 'shadow-lg border-2 border-yellow-600' : ''}`}
-                  onClick={() => { setCurrentTheme('onyx'); applyTheme('onyx'); }}
-                  title="Onyx"
-              >
-                <img src="https://placehold.co/32x32/1c1c1c/f1c40f?text=O" alt="Onyx Theme" className="w-full h-full object-cover"/>
-              </motion.button>
-              <motion.button
-                  animate={{ scale: currentTheme === 'gilded-age' ? 1.15 : 1, y: currentTheme === 'gilded-age' ? -2 : 0 }}
-                  whileHover={{ scale: 1.2, y: -2 }} whileTap={{ scale: 1.1 }} transition={{ type: 'spring', stiffness: 300 }}
-                  className={`w-8 h-8 rounded-full overflow-hidden ${currentTheme === 'gilded-age' ? 'shadow-lg border-2 border-yellow-800' : ''}`}
-                  onClick={() => { setCurrentTheme('gilded-age'); applyTheme('gilded-age'); }}
-                  title="Gilded Age"
-              >
-                <img src="https://placehold.co/32x32/fdf8f0/d4ac61?text=G" alt="Gilded Age Theme" className="w-full h-full object-cover"/>
-              </motion.button>
+            <motion.button
+              animate={{ scale: currentTheme === 'orchid' ? 1.15 : 1, y: currentTheme === 'orchid' ? -2 : 0 }}
+              whileHover={{ scale: 1.2, y: -2 }} whileTap={{ scale: 1.1 }} transition={{ type: 'spring', stiffness: 300 }}
+              className={`w-8 h-8 rounded-full overflow-hidden ${currentTheme === 'orchid' ? 'shadow-lg border-2 border-[#8bc34a]' : ''}`}
+              onClick={() => { setCurrentTheme('orchid'); applyTheme('orchid'); }}
+              title="Orchid"
+            >
+              <img src={orchidLogo} alt="Orchid Theme" className="w-full h-full object-cover" />
+            </motion.button>
+            <motion.button
+              animate={{ scale: currentTheme === 'eco-friendly' ? 1.15 : 1, y: currentTheme === 'eco-friendly' ? -2 : 0 }}
+              whileHover={{ scale: 1.2, y: -2 }} whileTap={{ scale: 1.1 }} transition={{ type: 'spring', stiffness: 300 }}
+              className={`w-8 h-8 rounded-full overflow-hidden ${currentTheme === 'eco-friendly' ? 'shadow-lg border-2 border-green-500' : ''}`}
+              onClick={() => { setCurrentTheme('eco-friendly'); applyTheme('eco-friendly'); }}
+              title="Eco-Friendly"
+            >
+              <div className="w-full h-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white font-bold text-xs">🌿</div>
+            </motion.button>
+            <motion.button
+              animate={{ scale: currentTheme === 'platinum' ? 1.15 : 1, y: currentTheme === 'platinum' ? -2 : 0 }}
+              whileHover={{ scale: 1.2, y: -2 }} whileTap={{ scale: 1.1 }} transition={{ type: 'spring', stiffness: 300 }}
+              className={`w-8 h-8 rounded-full overflow-hidden ${currentTheme === 'platinum' ? 'shadow-lg border-2 border-gray-400' : ''}`}
+              onClick={() => { setCurrentTheme('platinum'); applyTheme('platinum'); }}
+              title="Platinum"
+            >
+              <img src="https://placehold.co/32x32/f4f7f9/2c3e50?text=P" alt="Platinum Theme" className="w-full h-full object-cover" />
+            </motion.button>
+            <motion.button
+              animate={{ scale: currentTheme === 'onyx' ? 1.15 : 1, y: currentTheme === 'onyx' ? -2 : 0 }}
+              whileHover={{ scale: 1.2, y: -2 }} whileTap={{ scale: 1.1 }} transition={{ type: 'spring', stiffness: 300 }}
+              className={`w-8 h-8 rounded-full overflow-hidden ${currentTheme === 'onyx' ? 'shadow-lg border-2 border-yellow-600' : ''}`}
+              onClick={() => { setCurrentTheme('onyx'); applyTheme('onyx'); }}
+              title="Onyx"
+            >
+              <img src="https://placehold.co/32x32/1c1c1c/f1c40f?text=O" alt="Onyx Theme" className="w-full h-full object-cover" />
+            </motion.button>
+            <motion.button
+              animate={{ scale: currentTheme === 'gilded-age' ? 1.15 : 1, y: currentTheme === 'gilded-age' ? -2 : 0 }}
+              whileHover={{ scale: 1.2, y: -2 }} whileTap={{ scale: 1.1 }} transition={{ type: 'spring', stiffness: 300 }}
+              className={`w-8 h-8 rounded-full overflow-hidden ${currentTheme === 'gilded-age' ? 'shadow-lg border-2 border-yellow-800' : ''}`}
+              onClick={() => { setCurrentTheme('gilded-age'); applyTheme('gilded-age'); }}
+              title="Gilded Age"
+            >
+              <img src="https://placehold.co/32x32/fdf8f0/d4ac61?text=G" alt="Gilded Age Theme" className="w-full h-full object-cover" />
+            </motion.button>
           </div>
 
           {/* Main navigation menu */}
@@ -445,7 +444,7 @@ export default function DashboardLayout({ children }) {
         </div>
 
         {/* Main content area */}
-        <main className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6 lg:p-8 z-10 lg:ml-0 ml-0" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)'}}>
+        <main className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6 lg:p-8 z-10 lg:ml-0 ml-0" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={location.pathname}

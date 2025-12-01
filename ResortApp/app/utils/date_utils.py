@@ -190,3 +190,5 @@ def ist_to_utc(ist_dt: datetime) -> datetime:
     
     return ist_dt.astimezone(timezone.utc)
 
+
+

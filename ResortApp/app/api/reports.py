@@ -27,7 +27,7 @@ class ExpenseOut(BaseModel):
     category: str
     description: Optional[str]
     amount: float
-    expense_date: date
+    date: date
     class Config: from_attributes = True
 
 class ServiceChargeOut(BaseModel):
@@ -83,9 +83,9 @@ def get_checkin_by_employee_report(from_date: Optional[date] = None, to_date: Op
 @router.get("/expenses", response_model=List[ExpenseOut])
 def get_expenses_report(from_date: Optional[date] = None, to_date: Optional[date] = None, db: Session = Depends(get_db)):
     query = db.query(Expense)
-    if from_date: query = query.filter(Expense.expense_date >= from_date)
-    if to_date: query = query.filter(Expense.expense_date <= to_date)
-    return query.order_by(Expense.expense_date.desc()).all()
+    if from_date: query = query.filter(Expense.date >= from_date)
+    if to_date: query = query.filter(Expense.date <= to_date)
+    return query.order_by(Expense.date.desc()).all()
 
 @router.get("/room-bookings", response_model=List)
 def get_room_bookings_report(from_date: Optional[date] = None, to_date: Optional[date] = None, db: Session = Depends(get_db)):

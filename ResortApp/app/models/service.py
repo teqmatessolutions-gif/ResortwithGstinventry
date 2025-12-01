@@ -26,6 +26,7 @@ class Service(Base):
     name = Column(String, nullable=False)
     description = Column(String, nullable=True)
     charges = Column(Float, nullable=False)
+    gst_rate = Column(Float, default=0.18)  # GST rate for this service (default 18%)
     is_visible_to_guest = Column(Boolean, default=False, nullable=False)  # Toggle for guest visibility
     average_completion_time = Column(String, nullable=True)  # e.g., "30 minutes", "1 hour"
     created_at = Column(DateTime, default=datetime.utcnow)

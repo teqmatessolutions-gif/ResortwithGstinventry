@@ -757,6 +757,9 @@ def check_in_package_booking(
     booking.guest_photo_url = guest_photo_filename
 
     booking.status = "checked-in"
+    # Set the actual check-in timestamp for strict bill scoping
+    from datetime import datetime
+    booking.checked_in_at = datetime.utcnow()
     booking.user_id = current_user.id
 
     if booking.rooms:

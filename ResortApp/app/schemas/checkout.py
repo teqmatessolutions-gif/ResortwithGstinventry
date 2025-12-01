@@ -34,6 +34,7 @@ class BillBreakdown(BaseModel):
     # GST breakdown
     room_gst: Optional[float] = 0.0  # GST on room charges (12% if < 7500, 18% if >= 7500)
     food_gst: Optional[float] = 0.0  # GST on food charges (5% always)
+    service_gst: Optional[float] = 0.0  # GST on service charges (variable, default 18%)
     package_gst: Optional[float] = 0.0  # GST on package charges (12% if < 7500, 18% if >= 7500)
     consumables_gst: Optional[float] = 0.0  # GST on consumables (5%)
     asset_damage_gst: Optional[float] = 0.0  # GST on asset damages (18%)
@@ -148,3 +149,12 @@ class CheckoutRequest(BaseModel):
     
     # Late checkout
     actual_checkout_time: Optional[datetime] = Field(None, description="Actual checkout time (for late checkout fee calculation)")
+
+class InventoryCheckItem(BaseModel):
+    item_id: int
+    used_qty: float = 0
+    missing_qty: float = 0
+
+class InventoryCheckRequest(BaseModel):
+    inventory_notes: Optional[str] = None
+    items: List[InventoryCheckItem] = []

@@ -14,9 +14,9 @@ const Card = ({ title, className = "", children }) => {
   return (
     <div className={`${isGradient ? '' : 'bg-white'} rounded-2xl shadow-lg ${isGradient ? '' : 'border border-gray-200'} p-6 ${className}`}>
       {title && <h2 className={`text-xl font-bold mb-4 ${isGradient ? 'text-white' : 'text-gray-800'}`}>{title}</h2>}
-    {children}
-  </div>
-);
+      {children}
+    </div>
+  );
 };
 
 const COLORS = ["#4F46E5", "#6366F1", "#A78BFA", "#F472B6"];
@@ -84,6 +84,7 @@ const Services = () => {
   });
   const [activeTab, setActiveTab] = useState("dashboard"); // "dashboard", "create", "assign", "assigned", "requests", "report"
   const [serviceRequests, setServiceRequests] = useState([]);
+  const [paymentModal, setPaymentModal] = useState(null); // { orderId, amount }
 
   // Fetch service requests
   const fetchServiceRequests = async () => {
@@ -116,34 +117,34 @@ const Services = () => {
       setEmployees(eRes?.data || []);
       setInventoryItems(invRes?.data || []);
       setServiceRequests(srRes?.data || []);
-      
+
       // Fetch service requests if on requests tab (refresh)
       if (activeTab === "requests") {
         fetchServiceRequests();
       }
-      
+
       // Combine regular and package bookings
       const regularBookings = bRes.data?.bookings || [];
       const packageBookings = (pbRes.data || []).map(pb => ({ ...pb, is_package: true }));
       setBookings([...regularBookings, ...packageBookings]);
-      
+
       // Filter rooms to only show checked-in rooms
       const today = new Date();
       today.setHours(0, 0, 0, 0); // Set to start of day for comparison
       const checkedInRoomIds = new Set();
-      
+
       // Helper function to normalize status (handle all variations)
       const normalizeStatus = (status) => {
         if (!status) return '';
         return status.toLowerCase().replace(/[-_\s]/g, '');
       };
-      
+
       // Helper function to check if status is checked-in
       const isCheckedIn = (status) => {
         const normalized = normalizeStatus(status);
         return normalized === 'checkedin';
       };
-      
+
       // Get room IDs from checked-in regular bookings
       regularBookings.forEach(booking => {
         console.log(`Checking regular booking ${booking.id}, status: ${booking.status}, rooms:`, booking.rooms);
@@ -153,7 +154,7 @@ const Services = () => {
           const checkOutDate = new Date(booking.check_out);
           checkInDate.setHours(0, 0, 0, 0);
           checkOutDate.setHours(0, 0, 0, 0);
-          
+
           // Check if booking is active (today is between check-in and check-out)
           // Also allow if check-out is today (room is still checked in)
           if (checkInDate <= today && checkOutDate >= today) {
@@ -176,7 +177,7 @@ const Services = () => {
           console.log(`Regular booking ${booking.id} status '${booking.status}' is not checked-in (normalized: '${normalizeStatus(booking.status)}')`);
         }
       });
-      
+
       // Get room IDs from checked-in package bookings
       // Note: Package bookings have rooms as PackageBookingRoomOut objects with a nested 'room' property
       packageBookings.forEach(booking => {
@@ -187,7 +188,7 @@ const Services = () => {
           const checkOutDate = new Date(booking.check_out);
           checkInDate.setHours(0, 0, 0, 0);
           checkOutDate.setHours(0, 0, 0, 0);
-          
+
           // Check if booking is active (today is between check-in and check-out)
           // Also allow if check-out is today (room is still checked in)
           if (checkInDate <= today && checkOutDate >= today) {
@@ -213,7 +214,7 @@ const Services = () => {
           console.log(`Package booking ${booking.id} status '${booking.status}' is not checked-in (normalized: '${normalizeStatus(booking.status)}')`);
         }
       });
-      
+
       // Also check room status directly as a fallback (in case booking status is not set correctly)
       rRes.data.forEach(room => {
         const roomStatusNormalized = normalizeStatus(room.status);
@@ -222,9 +223,9 @@ const Services = () => {
           console.log(`Added checked-in room from room status: ${room.number} (ID: ${room.id}), status: ${room.status}`);
         }
       });
-      
+
       console.log(`Total checked-in room IDs: ${checkedInRoomIds.size}`, Array.from(checkedInRoomIds));
-      
+
       // Filter rooms to only show checked-in rooms
       const checkedInRooms = (rRes?.data || []).filter(room => checkedInRoomIds.has(room.id));
       console.log(`Filtered checked-in rooms: ${checkedInRooms.length}`, checkedInRooms.map(r => `${r.number} (status: ${r.status})`));
@@ -385,7 +386,7 @@ const Services = () => {
       if (form.average_completion_time) {
         formData.append('average_completion_time', form.average_completion_time);
       }
-      
+
       // Append images
       selectedImages.forEach((image) => {
         formData.append('images', image);
@@ -430,7 +431,7 @@ const Services = () => {
       setAssignForm({ ...assignForm, service_id: serviceId });
       return;
     }
-    
+
     try {
       // Always fetch fresh service data from API to ensure inventory items are loaded
       // First try to find in cached list for quick display
@@ -527,7 +528,7 @@ const Services = () => {
         isNetworkError: err.isNetworkError,
         isTimeout: err.isTimeout
       });
-      
+
       let errorMsg = "Failed to assign service. ";
       if (err.isNetworkError) {
         errorMsg += "Network error - please check if the backend server is running on port 8011.";
@@ -538,7 +539,7 @@ const Services = () => {
       } else if (err.message) {
         errorMsg += err.message;
       }
-      
+
       alert(`Error: ${errorMsg}`);
     }
   };
@@ -574,7 +575,7 @@ const Services = () => {
             const serviceAssignments = allAssignments.filter(
               a => a.assigned_service_id === id && a.balance_quantity > 0
             );
-            
+
             if (serviceAssignments.length > 0) {
               // Show return inventory modal
               setInventoryAssignments(serviceAssignments);
@@ -593,7 +594,7 @@ const Services = () => {
           // Continue with status update even if inventory fetch fails
         }
       }
-      
+
       // Update status without inventory returns
       await api.patch(`/services/assigned/${id}`, { status: newStatus });
       fetchAll();
@@ -605,7 +606,7 @@ const Services = () => {
 
   const handleCompleteWithReturns = async () => {
     if (!completingServiceId) return;
-    
+
     try {
       // Build inventory returns array - return balance (unused) items
       const inventory_returns = inventoryAssignments
@@ -629,34 +630,34 @@ const Services = () => {
             notes: `Returned balance inventory on service completion - ${a.item?.name || 'item'} (Assigned: ${a.quantity_assigned || 0}, Used: ${usedQty}, Balance: ${balanceQty}, Returned: ${returnQty})`
           };
         });
-      
+
       // Validate that all returns are within balance
       const invalidReturns = inventory_returns.filter(ret => {
         const assignment = inventoryAssignments.find(a => a.id === ret.assignment_id);
         const balanceQty = assignment?.balance_quantity || 0;
         return !assignment || balanceQty <= 0 || ret.quantity_returned > balanceQty;
       });
-      
+
       if (invalidReturns.length > 0) {
         alert("Error: Return quantities cannot exceed balance quantity. Please check your return quantities.");
         return;
       }
-      
+
       // Allow completing with 0 returns - user can skip returning items
       // No validation needed here, empty returns array is acceptable
-      
+
       // Update status with inventory returns (can be empty array if no returns)
       await api.patch(`/services/assigned/${completingServiceId}`, {
         status: "completed",
         inventory_returns: inventory_returns.length > 0 ? inventory_returns : []
       });
-      
+
       // Close modal and refresh
       setCompletingServiceId(null);
       setInventoryAssignments([]);
       setReturnQuantities({});
       fetchAll();
-      
+
       if (inventory_returns.length > 0) {
         alert(`Service marked as completed and ${inventory_returns.length} item(s) returned successfully!`);
       } else {
@@ -673,16 +674,16 @@ const Services = () => {
       console.log("[DEBUG] Viewing assigned service:", assignedService);
       console.log("[DEBUG] Service data:", assignedService.service);
       console.log("[DEBUG] Inventory items in assigned service:", assignedService.service?.inventory_items);
-      
+
       // Always fetch fresh service details to ensure we have inventory items
       const serviceResponse = await api.get(`/services?limit=50`);
       const allServices = serviceResponse.data || [];
       const serviceId = assignedService.service_id || assignedService.service?.id;
       const service = allServices.find(s => s.id === serviceId);
-      
+
       console.log("[DEBUG] Found service from API:", service);
       console.log("[DEBUG] Service inventory items from API:", service?.inventory_items);
-      
+
       // Fetch returned inventory items if employee is available
       let returnedItemsData = [];
       if (assignedService.employee && assignedService.employee.id) {
@@ -698,7 +699,7 @@ const Services = () => {
           console.warn("Could not fetch returned inventory items:", invError);
         }
       }
-      
+
       if (service) {
         setViewingAssignedService({
           ...assignedService,
@@ -742,7 +743,7 @@ const Services = () => {
       `- All service inventory item links\n\n` +
       `This action CANNOT be undone!\n\n` +
       `Type "DELETE ALL" to confirm:`;
-    
+
     const userInput = window.prompt(confirmMessage);
     if (userInput !== "DELETE ALL") {
       alert("Deletion cancelled.");
@@ -781,18 +782,18 @@ const Services = () => {
       const completed = assigned.filter(a => a.status === 'completed').length;
       const pending = assigned.filter(a => a.status === 'pending').length;
       const inProgress = assigned.filter(a => a.status === 'in_progress').length;
-      
+
       // Calculate inventory usage for this service
       const inventoryUsage = {};
       // Get inventory items from service definition
       const serviceInventoryItems = service.inventory_items || [];
-      
+
       assigned.forEach(assignment => {
         // Use service inventory items or fallback to assignment service inventory items
-        const items = serviceInventoryItems.length > 0 
-          ? serviceInventoryItems 
+        const items = serviceInventoryItems.length > 0
+          ? serviceInventoryItems
           : (assignment.service?.inventory_items || []);
-        
+
         items.forEach(item => {
           const itemId = item.id || item.inventory_item_id;
           if (!inventoryUsage[itemId]) {
@@ -833,7 +834,7 @@ const Services = () => {
       // Find the service in services array to get inventory items
       const serviceData = services.find(s => s.id === serviceId);
       const items = serviceData?.inventory_items || assignment.service?.inventory_items || [];
-      
+
       items.forEach(item => {
         const itemId = item.id || item.inventory_item_id;
         if (!overallInventoryUsage[itemId]) {
@@ -951,7 +952,7 @@ const Services = () => {
       if (reportFilters.room_number) params.append('room_number', reportFilters.room_number);
       if (reportFilters.guest_name) params.append('guest_name', reportFilters.guest_name);
       if (reportFilters.location_id) params.append('location_id', reportFilters.location_id);
-      
+
       const response = await api.get(`/reports/services/detailed-usage?${params.toString()}`);
       setServiceReport(response.data);
     } catch (error) {
@@ -990,10 +991,10 @@ const Services = () => {
       alert(`Failed to assign employee: ${msg}`);
     }
   };
-  
+
   const [checkoutInventoryModal, setCheckoutInventoryModal] = useState(null);
   const [checkoutInventoryDetails, setCheckoutInventoryDetails] = useState(null);
-  
+
   const handleViewCheckoutInventory = async (checkoutRequestId) => {
     try {
       const res = await api.get(`/bill/checkout-request/${checkoutRequestId}/inventory-details`);
@@ -1004,11 +1005,27 @@ const Services = () => {
       alert(`Failed to load inventory details: ${error.response?.data?.detail || error.message}`);
     }
   };
-  
+
+  const handleUpdateInventoryVerification = (index, field, value) => {
+    const newItems = [...checkoutInventoryDetails.items];
+    newItems[index][field] = parseFloat(value) || 0;
+    setCheckoutInventoryDetails({
+      ...checkoutInventoryDetails,
+      items: newItems
+    });
+  };
+
   const handleCompleteCheckoutRequest = async (checkoutRequestId, notes) => {
     try {
-      await api.post(`/bill/checkout-request/${checkoutRequestId}/check-inventory`, null, {
-        params: { inventory_notes: notes || "" }
+      const items = checkoutInventoryDetails.items.map(item => ({
+        item_id: item.id,
+        used_qty: item.used_qty || 0,
+        missing_qty: item.missing_qty || 0
+      }));
+
+      await api.post(`/bill/checkout-request/${checkoutRequestId}/check-inventory`, {
+        inventory_notes: notes || "",
+        items: items
       });
       alert("Checkout request completed successfully!");
       setCheckoutInventoryModal(null);
@@ -1040,17 +1057,17 @@ const Services = () => {
       setActiveTab("create");
       return;
     }
-    
+
     if (employees.length === 0) {
       alert("No employees available. Please add employees first.");
       return;
     }
-    
+
     // Automatically find and select "delivery" service
-    const deliveryService = services.find(s => 
+    const deliveryService = services.find(s =>
       s.name.toLowerCase().includes("delivery") || s.name.toLowerCase() === "delivery"
     );
-    
+
     // Open modal with only employee selection (delivery service is auto-selected)
     setQuickAssignModal({
       request: request,
@@ -1060,22 +1077,22 @@ const Services = () => {
 
   const handleQuickAssignSubmit = async () => {
     if (!quickAssignModal) return;
-    
+
     if (!quickAssignModal.employeeId) {
       alert("Please select an employee");
       return;
     }
-    
+
     // Automatically find delivery service
-    const deliveryService = services.find(s => 
+    const deliveryService = services.find(s =>
       s.name.toLowerCase().includes("delivery") || s.name.toLowerCase() === "delivery"
     );
-    
+
     if (!deliveryService) {
       alert("Delivery service not found. Please create a delivery service first.");
       return;
     }
-    
+
     try {
       const payload = {
         service_id: deliveryService.id,
@@ -1084,6 +1101,12 @@ const Services = () => {
       };
 
       const response = await api.post("/services/assign", payload);
+
+      // Also update the service request with the employee assignment
+      if (quickAssignModal.request.id) {
+        await handleAssignEmployeeToRequest(quickAssignModal.request.id, parseInt(quickAssignModal.employeeId));
+      }
+
       alert("Service assigned successfully!");
       setQuickAssignModal(null);
       fetchServiceRequests();
@@ -1097,6 +1120,28 @@ const Services = () => {
         errorMsg += err.message;
       }
       alert(`Error: ${errorMsg}`);
+    }
+  };
+
+  const handleMarkOrderPaid = (request) => {
+    setPaymentModal({
+      orderId: request.food_order_id,
+      amount: request.food_order_amount,
+      paymentMethod: "cash"
+    });
+  };
+
+  const handlePaymentSubmit = async () => {
+    if (!paymentModal) return;
+
+    try {
+      await api.post(`/food-orders/${paymentModal.orderId}/mark-paid?payment_method=${paymentModal.paymentMethod}`);
+      alert("Order marked as paid successfully!");
+      setPaymentModal(null);
+      fetchServiceRequests();
+    } catch (err) {
+      console.error("Failed to mark order as paid", err);
+      alert(`Error: ${err.response?.data?.detail || err.message}`);
     }
   };
 
@@ -1120,11 +1165,10 @@ const Services = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-6 py-3 font-medium transition-colors ${
-                  activeTab === tab.id
-                    ? "text-indigo-600 border-b-2 border-indigo-600"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
+                className={`px-6 py-3 font-medium transition-colors ${activeTab === tab.id
+                  ? "text-indigo-600 border-b-2 border-indigo-600"
+                  : "text-gray-600 hover:text-gray-900"
+                  }`}
               >
                 {tab.label}
               </button>
@@ -1348,8 +1392,8 @@ const Services = () => {
                     </thead>
                     <tbody>
                       {dashboardData.employeeStats.map((emp, idx) => {
-                        const completionRate = emp.total_assignments > 0 
-                          ? ((emp.completed / emp.total_assignments) * 100).toFixed(1) 
+                        const completionRate = emp.total_assignments > 0
+                          ? ((emp.completed / emp.total_assignments) * 100).toFixed(1)
                           : 0;
                         return (
                           <tr key={emp.employee_id} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition-colors`}>
@@ -1377,8 +1421,8 @@ const Services = () => {
                             <td className="py-3 px-4 text-center">
                               <div className="flex items-center justify-center">
                                 <div className="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
-                                  <div 
-                                    className="bg-green-600 h-2.5 rounded-full" 
+                                  <div
+                                    className="bg-green-600 h-2.5 rounded-full"
                                     style={{ width: `${completionRate}%` }}
                                   ></div>
                                 </div>
@@ -1559,160 +1603,156 @@ const Services = () => {
                       }).map((request, idx) => {
                         const isCheckoutRequest = request.is_checkout_request || request.id > 1000000;
                         const checkoutRequestId = isCheckoutRequest ? (request.checkout_request_id || request.id - 1000000) : null;
-                        
+
                         return (
-                        <tr key={request.id} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition-colors ${isCheckoutRequest ? 'bg-yellow-50' : ''}`}>
-                          <td className="p-3 border-t border-gray-200">
-                            #{isCheckoutRequest ? checkoutRequestId : request.id}
-                            {isCheckoutRequest && <span className="ml-2 text-xs text-yellow-600">(Checkout)</span>}
-                          </td>
-                          <td className="p-3 border-t border-gray-200">
-                            {request.room_number ? `Room ${request.room_number}` : `Room ID: ${request.room_id}`}
-                            {isCheckoutRequest && request.guest_name && (
-                              <div className="text-xs text-gray-600 mt-1">Guest: {request.guest_name}</div>
-                            )}
-                          </td>
-                          <td className="p-3 border-t border-gray-200">
-                            {request.request_type === "cleaning" ? (
-                              <span className="text-sm text-orange-600 font-medium">🧹 Cleaning Service</span>
-                            ) : request.request_type === "refill" ? (
-                              <span className="text-sm text-purple-600 font-medium">🔄 Refill Service</span>
-                            ) : isCheckoutRequest ? (
-                              <span className="text-sm text-gray-600">Checkout Verification</span>
-                            ) : (
-                              <div className="text-sm">
-                                {request.food_order_id ? (
+                          <tr key={request.id} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition-colors ${isCheckoutRequest ? 'bg-yellow-50' : ''}`}>
+                            <td className="p-3 border-t border-gray-200">
+                              #{isCheckoutRequest ? checkoutRequestId : request.id}
+                              {isCheckoutRequest && <span className="ml-2 text-xs text-yellow-600">(Checkout)</span>}
+                            </td>
+                            <td className="p-3 border-t border-gray-200">
+                              {request.room_number ? `Room ${request.room_number}` : `Room ID: ${request.room_id}`}
+                              {isCheckoutRequest && request.guest_name && (
+                                <div className="text-xs text-gray-600 mt-1">Guest: {request.guest_name}</div>
+                              )}
+                            </td>
+                            <td className="p-3 border-t border-gray-200">
+                              {request.request_type === "cleaning" ? (
+                                <span className="text-sm text-orange-600 font-medium">🧹 Cleaning Service</span>
+                              ) : request.request_type === "refill" ? (
+                                <span className="text-sm text-purple-600 font-medium">🔄 Refill Service</span>
+                              ) : isCheckoutRequest ? (
+                                <span className="text-sm text-gray-600">Checkout Verification</span>
+                              ) : (
+                                <div className="text-sm">
+                                  {request.food_order_id ? (
+                                    <>
+                                      <div>Order #{request.food_order_id}</div>
+                                      {request.food_order_amount && (
+                                        <div className="text-gray-600">₹{request.food_order_amount.toFixed(2)}</div>
+                                      )}
+                                      {request.food_order_status && (
+                                        <span className={`px-2 py-1 rounded text-xs ${request.food_order_status === 'completed' ? 'bg-green-100 text-green-800' :
+                                          request.food_order_status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                            'bg-gray-100 text-gray-800'
+                                          }`}>
+                                          {request.food_order_status}
+                                        </span>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <span className="text-gray-400 text-xs">No food order</span>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                            <td className="p-3 border-t border-gray-200">
+                              <span className={`px-2 py-1 rounded text-xs capitalize ${request.request_type === "cleaning" ? 'bg-orange-100 text-orange-800' :
+                                request.request_type === "refill" ? 'bg-purple-100 text-purple-800' :
+                                  isCheckoutRequest ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
+                                }`}>
+                                {request.request_type === "cleaning" ? "🧹 cleaning" :
+                                  request.request_type === "refill" ? "🔄 refill" :
+                                    isCheckoutRequest ? 'checkout_verification' : (request.request_type || 'delivery')}
+                              </span>
+                            </td>
+                            <td className="p-3 border-t border-gray-200">
+                              <div className="max-w-xs truncate" title={request.description}>
+                                {request.description || '-'}
+                              </div>
+                            </td>
+                            <td className="p-3 border-t border-gray-200">
+                              {request.employee_name || request.employee_id ? (
+                                <span className="text-sm">{request.employee_name || `Employee #${request.employee_id}`}</span>
+                              ) : (
+                                <span className="text-gray-400 text-sm">Not assigned</span>
+                              )}
+                            </td>
+                            <td className="p-3 border-t border-gray-200">
+                              {isCheckoutRequest ? (
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${request.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                  request.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                    request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                      'bg-gray-100 text-gray-800'
+                                  }`}>
+                                  {request.status || 'pending'}
+                                </span>
+                              ) : (
+                                <select
+                                  value={request.status}
+                                  onChange={(e) => handleUpdateRequestStatus(request.id, e.target.value)}
+                                  className={`border p-2 rounded-lg bg-white text-sm ${request.status === 'completed' ? 'bg-green-50' :
+                                    request.status === 'in_progress' ? 'bg-yellow-50' :
+                                      request.status === 'cancelled' ? 'bg-red-50' :
+                                        'bg-gray-50'
+                                    }`}
+                                >
+                                  <option value="pending">Pending</option>
+                                  <option value="in_progress">In Progress</option>
+                                  <option value="completed">Completed</option>
+                                  <option value="cancelled">Cancelled</option>
+                                </select>
+                              )}
+                            </td>
+                            <td className="p-3 border-t border-gray-200 text-sm">
+                              {request.service?.average_completion_time ? (
+                                <span className="text-indigo-600 font-medium">{request.service.average_completion_time}</span>
+                              ) : (
+                                <span className="text-gray-400 italic">-</span>
+                              )}
+                            </td>
+                            <td className="p-3 border-t border-gray-200 text-sm">
+                              {request.created_at ? new Date(request.created_at).toLocaleString() : '-'}
+                            </td>
+                            <td className="p-3 border-t border-gray-200 text-sm">
+                              {request.completed_at ? (
+                                <span className="text-green-600">
+                                  {new Date(request.completed_at).toLocaleString()}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </td>
+                            <td className="p-3 border-t border-gray-200">
+                              <div className="flex gap-2">
+                                {isCheckoutRequest ? (
                                   <>
-                                    <div>Order #{request.food_order_id}</div>
-                                    {request.food_order_amount && (
-                                      <div className="text-gray-600">₹{request.food_order_amount.toFixed(2)}</div>
-                                    )}
-                                    {request.food_order_status && (
-                                      <span className={`px-2 py-1 rounded text-xs ${
-                                        request.food_order_status === 'completed' ? 'bg-green-100 text-green-800' :
-                                        request.food_order_status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                        'bg-gray-100 text-gray-800'
-                                      }`}>
-                                        {request.food_order_status}
+                                    {(request.status === "pending" || request.status === "in_progress" || request.status === "inventory_checked") ? (
+                                      <button
+                                        onClick={() => handleViewCheckoutInventory(checkoutRequestId)}
+                                        className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                                        title="View inventory details and verify"
+                                      >
+                                        ✓ Verify Inventory
+                                      </button>
+                                    ) : request.status === "completed" ? (
+                                      <span className="px-3 py-1 rounded text-sm font-medium bg-green-100 text-green-800">
+                                        ✓ Completed
                                       </span>
-                                    )}
+                                    ) : null}
                                   </>
                                 ) : (
-                                  <span className="text-gray-400 text-xs">No food order</span>
+                                  <>
+                                    {request.status === "pending" && !request.employee_id && !request.employee_name && (
+                                      <button
+                                        onClick={() => handleQuickAssignFromRequest(request)}
+                                        className="px-3 py-1 rounded text-sm font-medium bg-green-500 hover:bg-green-600 text-white"
+                                        title="Quick assign service to this room"
+                                      >
+                                        Assign Service
+                                      </button>
+                                    )}
+                                    {request.employee_id || request.employee_name ? (
+                                      <span className="text-sm text-gray-600">
+                                        {request.employee_name || `Employee #${request.employee_id}`}
+                                      </span>
+                                    ) : null}
+                                  </>
                                 )}
                               </div>
-                            )}
-                          </td>
-                          <td className="p-3 border-t border-gray-200">
-                            <span className={`px-2 py-1 rounded text-xs capitalize ${
-                              request.request_type === "cleaning" ? 'bg-orange-100 text-orange-800' :
-                              request.request_type === "refill" ? 'bg-purple-100 text-purple-800' :
-                              isCheckoutRequest ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {request.request_type === "cleaning" ? "🧹 cleaning" :
-                               request.request_type === "refill" ? "🔄 refill" :
-                               isCheckoutRequest ? 'checkout_verification' : (request.request_type || 'delivery')}
-                            </span>
-                          </td>
-                          <td className="p-3 border-t border-gray-200">
-                            <div className="max-w-xs truncate" title={request.description}>
-                              {request.description || '-'}
-                            </div>
-                          </td>
-                          <td className="p-3 border-t border-gray-200">
-                            {request.employee_name || request.employee_id ? (
-                              <span className="text-sm">{request.employee_name || `Employee #${request.employee_id}`}</span>
-                            ) : (
-                              <span className="text-gray-400 text-sm">Not assigned</span>
-                            )}
-                          </td>
-                          <td className="p-3 border-t border-gray-200">
-                            {isCheckoutRequest ? (
-                              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                request.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                request.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-gray-100 text-gray-800'
-                              }`}>
-                                {request.status || 'pending'}
-                              </span>
-                            ) : (
-                              <select
-                                value={request.status}
-                                onChange={(e) => handleUpdateRequestStatus(request.id, e.target.value)}
-                                className={`border p-2 rounded-lg bg-white text-sm ${
-                                  request.status === 'completed' ? 'bg-green-50' :
-                                  request.status === 'in_progress' ? 'bg-yellow-50' :
-                                  request.status === 'cancelled' ? 'bg-red-50' :
-                                  'bg-gray-50'
-                                }`}
-                              >
-                                <option value="pending">Pending</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="completed">Completed</option>
-                                <option value="cancelled">Cancelled</option>
-                              </select>
-                            )}
-                          </td>
-                          <td className="p-3 border-t border-gray-200 text-sm">
-                            {request.service?.average_completion_time ? (
-                              <span className="text-indigo-600 font-medium">{request.service.average_completion_time}</span>
-                            ) : (
-                              <span className="text-gray-400 italic">-</span>
-                            )}
-                          </td>
-                          <td className="p-3 border-t border-gray-200 text-sm">
-                            {request.created_at ? new Date(request.created_at).toLocaleString() : '-'}
-                          </td>
-                          <td className="p-3 border-t border-gray-200 text-sm">
-                            {request.completed_at ? (
-                              <span className="text-green-600">
-                                {new Date(request.completed_at).toLocaleString()}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </td>
-                          <td className="p-3 border-t border-gray-200">
-                            <div className="flex gap-2">
-                              {isCheckoutRequest ? (
-                                <>
-                                  {(request.status === "pending" || request.status === "in_progress" || request.status === "inventory_checked") ? (
-                                    <button
-                                      onClick={() => handleViewCheckoutInventory(checkoutRequestId)}
-                                      className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
-                                      title="View inventory details and verify"
-                                    >
-                                      ✓ Verify Inventory
-                                    </button>
-                                  ) : request.status === "completed" ? (
-                                    <span className="px-3 py-1 rounded text-sm font-medium bg-green-100 text-green-800">
-                                      ✓ Completed
-                                    </span>
-                                  ) : null}
-                                </>
-                              ) : (
-                                <>
-                                  {request.status === "pending" && !request.employee_id && !request.employee_name && (
-                                    <button
-                                      onClick={() => handleQuickAssignFromRequest(request)}
-                                      className="px-3 py-1 rounded text-sm font-medium bg-green-500 hover:bg-green-600 text-white"
-                                      title="Quick assign service to this room"
-                                    >
-                                      Assign Service
-                                    </button>
-                                  )}
-                                  {request.employee_id || request.employee_name ? (
-                                    <span className="text-sm text-gray-600">
-                                      {request.employee_name || `Employee #${request.employee_id}`}
-                                    </span>
-                                  ) : null}
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
+                            </td>
+                          </tr>
+                        );
                       })}
                     </tbody>
                   </table>
@@ -1790,7 +1830,7 @@ const Services = () => {
                     <div>
                       <span className="text-sm text-gray-600">Date Range:</span>
                       <p className="text-lg font-semibold text-gray-800">
-                        {serviceReport.from_date ? new Date(serviceReport.from_date).toLocaleDateString() : 'All'} - 
+                        {serviceReport.from_date ? new Date(serviceReport.from_date).toLocaleDateString() : 'All'} -
                         {serviceReport.to_date ? new Date(serviceReport.to_date).toLocaleDateString() : 'All'}
                       </p>
                     </div>
@@ -1855,11 +1895,10 @@ const Services = () => {
                             <td className="p-3 border-t border-gray-200">{s.employee_name}</td>
                             <td className="p-3 border-t border-gray-200 font-semibold">₹{s.service_charges}</td>
                             <td className="p-3 border-t border-gray-200">
-                              <span className={`px-2 py-1 rounded text-xs ${
-                                s.status === 'completed' ? 'bg-green-100 text-green-800' :
+                              <span className={`px-2 py-1 rounded text-xs ${s.status === 'completed' ? 'bg-green-100 text-green-800' :
                                 s.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-gray-100 text-gray-800'
-                              }`}>
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
                                 {s.status}
                               </span>
                             </td>
@@ -1943,7 +1982,7 @@ const Services = () => {
         {/* Create Service Tab */}
         {activeTab === "create" && (
           <div className="space-y-6">
-        {/* KPI Cards */}
+            {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card title="Total Services" className="bg-gradient-to-br from-blue-500 to-blue-700 text-white">
                 <div className="text-3xl font-bold">{totalServices}</div>
@@ -1961,329 +2000,326 @@ const Services = () => {
                 <div className="text-3xl font-bold">{services.filter(s => s.inventory_items && s.inventory_items.length > 0).length}</div>
                 <p className="text-sm opacity-90 mt-1">With items</p>
               </Card>
-        </div>
+            </div>
 
-        {/* Filters */}
-        <Card title="Filters">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <input
-              type="text"
-              placeholder="Search by name or description..."
-              value={serviceFilters.search}
-              onChange={(e) => setServiceFilters({ ...serviceFilters, search: e.target.value })}
-              className="border p-2 rounded-lg"
-            />
-            <select
-              value={serviceFilters.visible}
-              onChange={(e) => setServiceFilters({ ...serviceFilters, visible: e.target.value })}
-              className="border p-2 rounded-lg"
-            >
-              <option value="">All Visibility</option>
-              <option value="true">Visible to Guests</option>
-              <option value="false">Hidden</option>
-            </select>
-            <select
-              value={serviceFilters.hasInventory}
-              onChange={(e) => setServiceFilters({ ...serviceFilters, hasInventory: e.target.value })}
-              className="border p-2 rounded-lg"
-            >
-              <option value="">All Services</option>
-              <option value="true">With Inventory</option>
-              <option value="false">Without Inventory</option>
-            </select>
-            <select
-              value={serviceFilters.hasImages}
-              onChange={(e) => setServiceFilters({ ...serviceFilters, hasImages: e.target.value })}
-              className="border p-2 rounded-lg"
-            >
-              <option value="">All Services</option>
-              <option value="true">With Images</option>
-              <option value="false">Without Images</option>
-            </select>
-            <button
-              onClick={() => setServiceFilters({ search: "", visible: "", hasInventory: "", hasImages: "" })}
-              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium"
-            >
-              Clear Filters
-            </button>
-          </div>
-        </Card>
+            {/* Filters */}
+            <Card title="Filters">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <input
+                  type="text"
+                  placeholder="Search by name or description..."
+                  value={serviceFilters.search}
+                  onChange={(e) => setServiceFilters({ ...serviceFilters, search: e.target.value })}
+                  className="border p-2 rounded-lg"
+                />
+                <select
+                  value={serviceFilters.visible}
+                  onChange={(e) => setServiceFilters({ ...serviceFilters, visible: e.target.value })}
+                  className="border p-2 rounded-lg"
+                >
+                  <option value="">All Visibility</option>
+                  <option value="true">Visible to Guests</option>
+                  <option value="false">Hidden</option>
+                </select>
+                <select
+                  value={serviceFilters.hasInventory}
+                  onChange={(e) => setServiceFilters({ ...serviceFilters, hasInventory: e.target.value })}
+                  className="border p-2 rounded-lg"
+                >
+                  <option value="">All Services</option>
+                  <option value="true">With Inventory</option>
+                  <option value="false">Without Inventory</option>
+                </select>
+                <select
+                  value={serviceFilters.hasImages}
+                  onChange={(e) => setServiceFilters({ ...serviceFilters, hasImages: e.target.value })}
+                  className="border p-2 rounded-lg"
+                >
+                  <option value="">All Services</option>
+                  <option value="true">With Images</option>
+                  <option value="false">Without Images</option>
+                </select>
+                <button
+                  onClick={() => setServiceFilters({ search: "", visible: "", hasInventory: "", hasImages: "" })}
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </Card>
 
-          <Card title="Create New Service">
-            <div className="space-y-3">
-              {editingServiceId && (
-                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex flex-col gap-2">
-                  <div className="text-sm text-yellow-800 font-semibold">
-                    Editing service ID #{editingServiceId}. Update the details below and click "Update Service" to save changes.
+            <Card title="Create New Service">
+              <div className="space-y-3">
+                {editingServiceId && (
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex flex-col gap-2">
+                    <div className="text-sm text-yellow-800 font-semibold">
+                      Editing service ID #{editingServiceId}. Update the details below and click "Update Service" to save changes.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCancelEdit}
+                      className="self-start text-sm text-blue-700 hover:text-blue-900 underline"
+                    >
+                      Cancel editing
+                    </button>
                   </div>
+                )}
+                <input
+                  type="text"
+                  placeholder="Service Name"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-indigo-400"
+                />
+                <input
+                  type="text"
+                  placeholder="Description"
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-indigo-400"
+                />
+                <input
+                  type="number"
+                  placeholder="Charges"
+                  value={form.charges}
+                  onChange={(e) => setForm({ ...form, charges: e.target.value })}
+                  className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-indigo-400"
+                />
+                <input
+                  type="text"
+                  placeholder="Average Completion Time (e.g., 30 minutes, 1 hour)"
+                  value={form.average_completion_time}
+                  onChange={(e) => setForm({ ...form, average_completion_time: e.target.value })}
+                  className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-indigo-400"
+                />
+                {/* Guest Visibility Toggle */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="is_visible_to_guest"
+                    checked={form.is_visible_to_guest}
+                    onChange={(e) => setForm({ ...form, is_visible_to_guest: e.target.checked })}
+                    className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  />
+                  <label htmlFor="is_visible_to_guest" className="text-sm font-medium text-gray-700">
+                    Visible to Guests/Users
+                  </label>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Service Images</label>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-indigo-400"
+                  />
+                  {imagePreviews.length > 0 && (
+                    <div className="grid grid-cols-4 gap-2 mt-2">
+                      {imagePreviews.map((preview, idx) => (
+                        <img key={idx} src={preview} alt={`Preview ${idx + 1}`} className="w-full h-20 object-cover rounded border" />
+                      ))}
+                    </div>
+                  )}
+                  {editingServiceId && existingImages.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-sm font-medium text-gray-700 mb-2">Existing Images</p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {existingImages.map((img) => {
+                          const marked = imagesToRemove.includes(img.id);
+                          return (
+                            <div
+                              key={img.id}
+                              className={`border rounded-lg p-2 text-center ${marked ? "border-red-400 bg-red-50 opacity-70" : "border-gray-200"}`}
+                            >
+                              <img
+                                src={getImageUrl(img.image_url)}
+                                alt="Service"
+                                className="w-full h-20 object-cover rounded mb-2"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleToggleExistingImage(img.id)}
+                                className={`w-full text-xs font-semibold px-2 py-1 rounded ${marked ? "bg-gray-200 text-gray-700" : "bg-red-500 text-white"
+                                  }`}
+                              >
+                                {marked ? "Keep Image" : "Remove Image"}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Inventory Items Section */}
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Inventory Items (Optional)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAddInventoryItem}
+                    className="mb-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded"
+                  >
+                    + Add Inventory Item
+                  </button>
+                  {selectedInventoryItems.map((item, index) => (
+                    <div key={index} className="flex gap-2 mb-2 items-end">
+                      <select
+                        value={item.inventory_item_id}
+                        onChange={(e) => handleUpdateInventoryItem(index, 'inventory_item_id', e.target.value)}
+                        className="flex-1 border p-2 rounded-lg text-sm"
+                      >
+                        <option value="">Select Item</option>
+                        {inventoryItems.map((invItem) => (
+                          <option key={invItem.id} value={invItem.id}>
+                            {invItem.name} {invItem.item_code ? `(${invItem.item_code})` : ''} - {invItem.unit}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => handleUpdateInventoryItem(index, 'quantity', e.target.value)}
+                        placeholder="Qty"
+                        min="0.01"
+                        step="0.01"
+                        className="w-24 border p-2 rounded-lg text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveInventoryItem(index)}
+                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={handleSaveService}
+                  className="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-lg shadow-lg font-semibold"
+                >
+                  {editingServiceId ? "Update Service" : "Create Service"}
+                </button>
+                {editingServiceId && (
                   <button
                     type="button"
                     onClick={handleCancelEdit}
-                    className="self-start text-sm text-blue-700 hover:text-blue-900 underline"
+                    className="w-full mt-2 bg-gray-200 hover:bg-gray-300 text-gray-800 p-3 rounded-lg font-semibold"
                   >
-                    Cancel editing
+                    Cancel Edit
                   </button>
+                )}
+              </div>
+            </Card>
+
+            {/* All Services Table */}
+            <Card title="All Services">
+              {loading ? (
+                <div className="flex justify-center items-center h-48">
+                  <Loader2 size={48} className="animate-spin text-indigo-500" />
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border border-gray-200 rounded-lg">
+                    <thead className="bg-gray-100 text-gray-700 uppercase tracking-wider">
+                      <tr>
+                        <th className="py-3 px-4 text-left">Image</th>
+                        <th className="py-3 px-4 text-left">Service Name</th>
+                        <th className="py-3 px-4 text-left">Description</th>
+                        <th className="py-3 px-4 text-right">Charges (₹)</th>
+                        <th className="py-3 px-4 text-center">Avg. Time</th>
+                        <th className="py-3 px-4 text-center">Visible</th>
+                        <th className="py-3 px-4 text-center">Inventory</th>
+                        <th className="py-3 px-4 text-center">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const filteredServices = services.filter(s => {
+                          if (serviceFilters.search && !s.name.toLowerCase().includes(serviceFilters.search.toLowerCase()) && !s.description?.toLowerCase().includes(serviceFilters.search.toLowerCase())) return false;
+                          if (serviceFilters.visible !== "" && s.is_visible_to_guest !== (serviceFilters.visible === "true")) return false;
+                          if (serviceFilters.hasInventory !== "" && ((s.inventory_items && s.inventory_items.length > 0) !== (serviceFilters.hasInventory === "true"))) return false;
+                          if (serviceFilters.hasImages !== "" && ((s.images && s.images.length > 0) !== (serviceFilters.hasImages === "true"))) return false;
+                          return true;
+                        });
+                        return filteredServices.length === 0 ? (
+                          <tr>
+                            <td colSpan="8" className="py-8 text-center text-gray-500">
+                              No services found matching filters. Create your first service above.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredServices.map((s, idx) => (
+                            <tr key={s.id} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition-colors`}>
+                              <td className="py-3 px-4">
+                                {s.images && s.images.length > 0 ? (
+                                  <img src={getImageUrl(s.images[0].image_url)} alt={s.name} className="w-16 h-16 object-cover rounded border" />
+                                ) : (
+                                  <div className="w-16 h-16 bg-gray-200 rounded border flex items-center justify-center text-xs text-gray-400">No Image</div>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 font-semibold">{s.name}</td>
+                              <td className="py-3 px-4">{s.description}</td>
+                              <td className="py-3 px-4 text-right font-semibold">₹{s.charges}</td>
+                              <td className="py-3 px-4 text-center text-sm">
+                                {s.average_completion_time || <span className="text-gray-400">-</span>}
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <span className={`px-2 py-1 rounded text-xs font-semibold ${s.is_visible_to_guest
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-gray-100 text-gray-800'
+                                  }`}>
+                                  {s.is_visible_to_guest ? 'Visible' : 'Hidden'}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                {s.inventory_items && s.inventory_items.length > 0 ? (
+                                  <span className="px-2 py-1 rounded text-xs font-semibold bg-indigo-100 text-indigo-800">
+                                    {s.inventory_items.length} items
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400 text-sm">-</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <div className="flex flex-wrap gap-2 justify-center">
+                                  <button
+                                    onClick={() => handleEditService(s)}
+                                    className="px-3 py-1 rounded text-sm font-medium bg-blue-500 hover:bg-blue-600 text-white"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => handleToggleVisibility(s.id, s.is_visible_to_guest)}
+                                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${s.is_visible_to_guest
+                                      ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                                      : 'bg-green-500 hover:bg-green-600 text-white'
+                                      }`}
+                                  >
+                                    {s.is_visible_to_guest ? 'Hide' : 'Show'}
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteService(s.id)}
+                                    className="px-3 py-1 rounded text-sm font-medium bg-red-500 hover:bg-red-600 text-white"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        );
+                      })()}
+                    </tbody>
+                  </table>
                 </div>
               )}
-              <input
-                type="text"
-                placeholder="Service Name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-indigo-400"
-              />
-              <input
-                type="text"
-                placeholder="Description"
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-indigo-400"
-              />
-              <input
-                type="number"
-                placeholder="Charges"
-                value={form.charges}
-                onChange={(e) => setForm({ ...form, charges: e.target.value })}
-                className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-indigo-400"
-              />
-              <input
-                type="text"
-                placeholder="Average Completion Time (e.g., 30 minutes, 1 hour)"
-                value={form.average_completion_time}
-                onChange={(e) => setForm({ ...form, average_completion_time: e.target.value })}
-                className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-indigo-400"
-              />
-              {/* Guest Visibility Toggle */}
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="is_visible_to_guest"
-                  checked={form.is_visible_to_guest}
-                  onChange={(e) => setForm({ ...form, is_visible_to_guest: e.target.checked })}
-                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                />
-                <label htmlFor="is_visible_to_guest" className="text-sm font-medium text-gray-700">
-                  Visible to Guests/Users
-                </label>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Service Images</label>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-indigo-400"
-                />
-                {imagePreviews.length > 0 && (
-                  <div className="grid grid-cols-4 gap-2 mt-2">
-                    {imagePreviews.map((preview, idx) => (
-                      <img key={idx} src={preview} alt={`Preview ${idx + 1}`} className="w-full h-20 object-cover rounded border" />
-                    ))}
-                  </div>
-                )}
-                {editingServiceId && existingImages.length > 0 && (
-                  <div className="mt-4">
-                    <p className="text-sm font-medium text-gray-700 mb-2">Existing Images</p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {existingImages.map((img) => {
-                        const marked = imagesToRemove.includes(img.id);
-                        return (
-                          <div
-                            key={img.id}
-                            className={`border rounded-lg p-2 text-center ${marked ? "border-red-400 bg-red-50 opacity-70" : "border-gray-200"}`}
-                          >
-                            <img
-                              src={getImageUrl(img.image_url)}
-                              alt="Service"
-                              className="w-full h-20 object-cover rounded mb-2"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleToggleExistingImage(img.id)}
-                              className={`w-full text-xs font-semibold px-2 py-1 rounded ${
-                                marked ? "bg-gray-200 text-gray-700" : "bg-red-500 text-white"
-                              }`}
-                            >
-                              {marked ? "Keep Image" : "Remove Image"}
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Inventory Items Section */}
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Inventory Items (Optional)
-                </label>
-                <button
-                  type="button"
-                  onClick={handleAddInventoryItem}
-                  className="mb-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded"
-                >
-                  + Add Inventory Item
-                </button>
-                {selectedInventoryItems.map((item, index) => (
-                  <div key={index} className="flex gap-2 mb-2 items-end">
-                    <select
-                      value={item.inventory_item_id}
-                      onChange={(e) => handleUpdateInventoryItem(index, 'inventory_item_id', e.target.value)}
-                      className="flex-1 border p-2 rounded-lg text-sm"
-                    >
-                      <option value="">Select Item</option>
-                      {inventoryItems.map((invItem) => (
-                        <option key={invItem.id} value={invItem.id}>
-                          {invItem.name} {invItem.item_code ? `(${invItem.item_code})` : ''} - {invItem.unit}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="number"
-                      value={item.quantity}
-                      onChange={(e) => handleUpdateInventoryItem(index, 'quantity', e.target.value)}
-                      placeholder="Qty"
-                      min="0.01"
-                      step="0.01"
-                      className="w-24 border p-2 rounded-lg text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveInventoryItem(index)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                onClick={handleSaveService}
-                className="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-lg shadow-lg font-semibold"
-              >
-                {editingServiceId ? "Update Service" : "Create Service"}
-              </button>
-              {editingServiceId && (
-                <button
-                  type="button"
-                  onClick={handleCancelEdit}
-                  className="w-full mt-2 bg-gray-200 hover:bg-gray-300 text-gray-800 p-3 rounded-lg font-semibold"
-                >
-                  Cancel Edit
-                </button>
-              )}
-            </div>
-          </Card>
-
-          {/* All Services Table */}
-          <Card title="All Services">
-            {loading ? (
-              <div className="flex justify-center items-center h-48">
-                <Loader2 size={48} className="animate-spin text-indigo-500" />
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full border border-gray-200 rounded-lg">
-                  <thead className="bg-gray-100 text-gray-700 uppercase tracking-wider">
-                    <tr>
-                      <th className="py-3 px-4 text-left">Image</th>
-                      <th className="py-3 px-4 text-left">Service Name</th>
-                      <th className="py-3 px-4 text-left">Description</th>
-                      <th className="py-3 px-4 text-right">Charges (₹)</th>
-                      <th className="py-3 px-4 text-center">Avg. Time</th>
-                      <th className="py-3 px-4 text-center">Visible</th>
-                      <th className="py-3 px-4 text-center">Inventory</th>
-                      <th className="py-3 px-4 text-center">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(() => {
-                      const filteredServices = services.filter(s => {
-                        if (serviceFilters.search && !s.name.toLowerCase().includes(serviceFilters.search.toLowerCase()) && !s.description?.toLowerCase().includes(serviceFilters.search.toLowerCase())) return false;
-                        if (serviceFilters.visible !== "" && s.is_visible_to_guest !== (serviceFilters.visible === "true")) return false;
-                        if (serviceFilters.hasInventory !== "" && ((s.inventory_items && s.inventory_items.length > 0) !== (serviceFilters.hasInventory === "true"))) return false;
-                        if (serviceFilters.hasImages !== "" && ((s.images && s.images.length > 0) !== (serviceFilters.hasImages === "true"))) return false;
-                        return true;
-                      });
-                      return filteredServices.length === 0 ? (
-                        <tr>
-                          <td colSpan="8" className="py-8 text-center text-gray-500">
-                            No services found matching filters. Create your first service above.
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredServices.map((s, idx) => (
-                        <tr key={s.id} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition-colors`}>
-                          <td className="py-3 px-4">
-                            {s.images && s.images.length > 0 ? (
-                              <img src={getImageUrl(s.images[0].image_url)} alt={s.name} className="w-16 h-16 object-cover rounded border" />
-                            ) : (
-                              <div className="w-16 h-16 bg-gray-200 rounded border flex items-center justify-center text-xs text-gray-400">No Image</div>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 font-semibold">{s.name}</td>
-                          <td className="py-3 px-4">{s.description}</td>
-                          <td className="py-3 px-4 text-right font-semibold">₹{s.charges}</td>
-                          <td className="py-3 px-4 text-center text-sm">
-                            {s.average_completion_time || <span className="text-gray-400">-</span>}
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                              s.is_visible_to_guest 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {s.is_visible_to_guest ? 'Visible' : 'Hidden'}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            {s.inventory_items && s.inventory_items.length > 0 ? (
-                              <span className="px-2 py-1 rounded text-xs font-semibold bg-indigo-100 text-indigo-800">
-                                {s.inventory_items.length} items
-                              </span>
-                            ) : (
-                              <span className="text-gray-400 text-sm">-</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <div className="flex flex-wrap gap-2 justify-center">
-                              <button
-                                onClick={() => handleEditService(s)}
-                                className="px-3 py-1 rounded text-sm font-medium bg-blue-500 hover:bg-blue-600 text-white"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => handleToggleVisibility(s.id, s.is_visible_to_guest)}
-                                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                                  s.is_visible_to_guest
-                                    ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
-                                    : 'bg-green-500 hover:bg-green-600 text-white'
-                                }`}
-                              >
-                                {s.is_visible_to_guest ? 'Hide' : 'Show'}
-                              </button>
-                              <button
-                                onClick={() => handleDeleteService(s.id)}
-                                className="px-3 py-1 rounded text-sm font-medium bg-red-500 hover:bg-red-600 text-white"
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    );
-                    })()}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Card>
+            </Card>
           </div>
         )}
 
@@ -2447,290 +2483,290 @@ const Services = () => {
 
             {/* Assign Service Form */}
             <Card title="Assign New Service">
-            <div className="space-y-3">
-              <select
-                value={assignForm.service_id}
-                onChange={(e) => handleServiceSelect(e.target.value)}
-                className="w-full border p-3 rounded-lg"
-              >
-                <option value="">Select Service</option>
-                {services.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
+              <div className="space-y-3">
+                <select
+                  value={assignForm.service_id}
+                  onChange={(e) => handleServiceSelect(e.target.value)}
+                  className="w-full border p-3 rounded-lg"
+                >
+                  <option value="">Select Service</option>
+                  {services.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
 
-              {/* Service Details Display */}
-              {selectedServiceDetails && (
-                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <h3 className="font-semibold text-lg text-gray-800 mb-3">Service Details</h3>
-                  
-                  <div className="space-y-2 mb-4">
-                    <div>
-                      <span className="font-medium text-gray-700">Name:</span>
-                      <span className="ml-2 text-gray-900">{selectedServiceDetails.name}</span>
-                    </div>
-                    {selectedServiceDetails.description && (
+                {/* Service Details Display */}
+                {selectedServiceDetails && (
+                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h3 className="font-semibold text-lg text-gray-800 mb-3">Service Details</h3>
+
+                    <div className="space-y-2 mb-4">
                       <div>
-                        <span className="font-medium text-gray-700">Description:</span>
-                        <p className="ml-2 text-gray-900 mt-1">{selectedServiceDetails.description}</p>
+                        <span className="font-medium text-gray-700">Name:</span>
+                        <span className="ml-2 text-gray-900">{selectedServiceDetails.name}</span>
                       </div>
-                    )}
-                    <div>
-                      <span className="font-medium text-gray-700">Charges:</span>
-                      <span className="ml-2 text-gray-900 font-semibold">₹{selectedServiceDetails.charges}</span>
+                      {selectedServiceDetails.description && (
+                        <div>
+                          <span className="font-medium text-gray-700">Description:</span>
+                          <p className="ml-2 text-gray-900 mt-1">{selectedServiceDetails.description}</p>
+                        </div>
+                      )}
+                      <div>
+                        <span className="font-medium text-gray-700">Charges:</span>
+                        <span className="ml-2 text-gray-900 font-semibold">₹{selectedServiceDetails.charges}</span>
+                      </div>
+                      {selectedServiceDetails.images && selectedServiceDetails.images.length > 0 && (
+                        <div className="mt-2">
+                          <span className="font-medium text-gray-700">Images:</span>
+                          <div className="flex gap-2 mt-2">
+                            {selectedServiceDetails.images.slice(0, 3).map((img, idx) => (
+                              <img
+                                key={idx}
+                                src={getImageUrl(img.image_url)}
+                                alt={`${selectedServiceDetails.name} ${idx + 1}`}
+                                className="w-20 h-20 object-cover rounded border"
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    {selectedServiceDetails.images && selectedServiceDetails.images.length > 0 && (
-                      <div className="mt-2">
-                        <span className="font-medium text-gray-700">Images:</span>
-                        <div className="flex gap-2 mt-2">
-                          {selectedServiceDetails.images.slice(0, 3).map((img, idx) => (
-                            <img
-                              key={idx}
-                              src={getImageUrl(img.image_url)}
-                              alt={`${selectedServiceDetails.name} ${idx + 1}`}
-                              className="w-20 h-20 object-cover rounded border"
-                            />
+
+                    {/* Inventory Items Needed */}
+                    {selectedServiceDetails.inventory_items && selectedServiceDetails.inventory_items.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-blue-300">
+                        <h4 className="font-semibold text-md text-gray-800 mb-2">Inventory Items Needed:</h4>
+                        <div className="space-y-2">
+                          {selectedServiceDetails.inventory_items.map((item, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-2 bg-white rounded border border-blue-200">
+                              <div className="flex-1">
+                                <span className="font-medium text-gray-800">{item.name}</span>
+                                {item.item_code && (
+                                  <span className="ml-2 text-sm text-gray-600">({item.item_code})</span>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <span className="text-sm text-gray-600">
+                                  {item.quantity} {item.unit}
+                                </span>
+                                {item.unit_price > 0 && (
+                                  <span className="ml-2 text-sm text-gray-500">
+                                    @ ₹{item.unit_price}/{item.unit}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           ))}
                         </div>
                       </div>
                     )}
-                  </div>
 
-                  {/* Inventory Items Needed */}
-                  {selectedServiceDetails.inventory_items && selectedServiceDetails.inventory_items.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-blue-300">
-                      <h4 className="font-semibold text-md text-gray-800 mb-2">Inventory Items Needed:</h4>
-                      <div className="space-y-2">
-                        {selectedServiceDetails.inventory_items.map((item, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-2 bg-white rounded border border-blue-200">
-                            <div className="flex-1">
-                              <span className="font-medium text-gray-800">{item.name}</span>
-                              {item.item_code && (
-                                <span className="ml-2 text-sm text-gray-600">({item.item_code})</span>
-                              )}
-                            </div>
-                            <div className="text-right">
-                              <span className="text-sm text-gray-600">
-                                {item.quantity} {item.unit}
-                              </span>
-                              {item.unit_price > 0 && (
-                                <span className="ml-2 text-sm text-gray-500">
-                                  @ ₹{item.unit_price}/{item.unit}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        ))}
+                    {(!selectedServiceDetails.inventory_items || selectedServiceDetails.inventory_items.length === 0) && (
+                      <div className="mt-4 pt-4 border-t border-blue-300">
+                        <p className="text-sm text-gray-600 italic">No inventory items required for this service.</p>
                       </div>
-                    </div>
+                    )}
+                  </div>
+                )}
+
+                <select
+                  value={assignForm.employee_id}
+                  onChange={(e) => setAssignForm({ ...assignForm, employee_id: e.target.value })}
+                  className="w-full border p-3 rounded-lg"
+                >
+                  <option value="">Select Employee</option>
+                  {employees.map((e) => (
+                    <option key={e.id} value={e.id}>{e.name}</option>
+                  ))}
+                </select>
+                <select
+                  value={assignForm.room_id}
+                  onChange={(e) => setAssignForm({ ...assignForm, room_id: e.target.value })}
+                  className="w-full border p-3 rounded-lg"
+                >
+                  <option value="">Select Room</option>
+                  {rooms.length === 0 ? (
+                    <option value="" disabled>No checked-in rooms available</option>
+                  ) : (
+                    rooms.map((r) => (
+                      <option key={r.id} value={r.id}>Room {r.number}</option>
+                    ))
                   )}
-                  
-                  {(!selectedServiceDetails.inventory_items || selectedServiceDetails.inventory_items.length === 0) && (
-                    <div className="mt-4 pt-4 border-t border-blue-300">
-                      <p className="text-sm text-gray-600 italic">No inventory items required for this service.</p>
+                </select>
+                <select
+                  value={assignForm.status}
+                  onChange={(e) => setAssignForm({ ...assignForm, status: e.target.value })}
+                  className="w-full border p-3 rounded-lg"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                </select>
+
+                {/* Extra Inventory Items Section */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Extra Inventory Items (Optional - Additional items beyond service requirements)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAddExtraInventoryItem}
+                    className="mb-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded"
+                  >
+                    + Add Extra Inventory Item
+                  </button>
+                  {extraInventoryItems.map((item, index) => (
+                    <div key={index} className="flex gap-2 mb-2 items-end">
+                      <select
+                        value={item.inventory_item_id}
+                        onChange={(e) => handleUpdateExtraInventoryItem(index, 'inventory_item_id', e.target.value)}
+                        className="flex-1 border p-2 rounded-lg text-sm"
+                      >
+                        <option value="">Select Item</option>
+                        {inventoryItems.map((invItem) => (
+                          <option key={invItem.id} value={invItem.id}>
+                            {invItem.name} {invItem.item_code ? `(${invItem.item_code})` : ''} - {invItem.unit}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => handleUpdateExtraInventoryItem(index, 'quantity', e.target.value)}
+                        placeholder="Qty"
+                        min="0.01"
+                        step="0.01"
+                        className="w-24 border p-2 rounded-lg text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveExtraInventoryItem(index)}
+                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm"
+                      >
+                        Remove
+                      </button>
                     </div>
+                  ))}
+                  {extraInventoryItems.length === 0 && (
+                    <p className="text-xs text-gray-500 italic">No extra items added. Service will use only its default inventory items.</p>
                   )}
                 </div>
-              )}
 
-              <select
-                value={assignForm.employee_id}
-                onChange={(e) => setAssignForm({ ...assignForm, employee_id: e.target.value })}
-                className="w-full border p-3 rounded-lg"
-              >
-                <option value="">Select Employee</option>
-                {employees.map((e) => (
-                  <option key={e.id} value={e.id}>{e.name}</option>
-                ))}
-              </select>
-              <select
-                value={assignForm.room_id}
-                onChange={(e) => setAssignForm({ ...assignForm, room_id: e.target.value })}
-                className="w-full border p-3 rounded-lg"
-              >
-                <option value="">Select Room</option>
-                {rooms.length === 0 ? (
-                  <option value="" disabled>No checked-in rooms available</option>
-                ) : (
-                  rooms.map((r) => (
-                    <option key={r.id} value={r.id}>Room {r.number}</option>
-                  ))
-                )}
-              </select>
-              <select
-                value={assignForm.status}
-                onChange={(e) => setAssignForm({ ...assignForm, status: e.target.value })}
-                className="w-full border p-3 rounded-lg"
-              >
-                <option value="pending">Pending</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-              </select>
-
-              {/* Extra Inventory Items Section */}
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Extra Inventory Items (Optional - Additional items beyond service requirements)
-                </label>
                 <button
-                  type="button"
-                  onClick={handleAddExtraInventoryItem}
-                  className="mb-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded"
+                  onClick={handleAssign}
+                  className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg shadow-lg font-semibold"
                 >
-                  + Add Extra Inventory Item
+                  Assign Service
                 </button>
-                {extraInventoryItems.map((item, index) => (
-                  <div key={index} className="flex gap-2 mb-2 items-end">
-                    <select
-                      value={item.inventory_item_id}
-                      onChange={(e) => handleUpdateExtraInventoryItem(index, 'inventory_item_id', e.target.value)}
-                      className="flex-1 border p-2 rounded-lg text-sm"
-                    >
-                      <option value="">Select Item</option>
-                      {inventoryItems.map((invItem) => (
-                        <option key={invItem.id} value={invItem.id}>
-                          {invItem.name} {invItem.item_code ? `(${invItem.item_code})` : ''} - {invItem.unit}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="number"
-                      value={item.quantity}
-                      onChange={(e) => handleUpdateExtraInventoryItem(index, 'quantity', e.target.value)}
-                      placeholder="Qty"
-                      min="0.01"
-                      step="0.01"
-                      className="w-24 border p-2 rounded-lg text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveExtraInventoryItem(index)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-                {extraInventoryItems.length === 0 && (
-                  <p className="text-xs text-gray-500 italic">No extra items added. Service will use only its default inventory items.</p>
-                )}
               </div>
+            </Card>
 
-              <button
-                onClick={handleAssign}
-                className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg shadow-lg font-semibold"
-              >
-                Assign Service
-              </button>
-            </div>
-          </Card>
-
-          {/* Assigned Services Table */}
-        <Card title="Assigned Services">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
-            <select value={filters.room} onChange={(e) => setFilters({ ...filters, room: e.target.value })} className="border p-2 rounded-lg">
-              <option value="">All Rooms</option>
-              {assignedServices.map((s) => {
-                const room = s.room;
-                return room ? <option key={room.id} value={room.id}>Room {room.number}</option> : null;
-              }).filter(Boolean)}
-            </select>
-            <select value={filters.employee} onChange={(e) => setFilters({ ...filters, employee: e.target.value })} className="border p-2 rounded-lg">
-              <option value="">All Employees</option>
-              {employees.map((e) => (<option key={e.id} value={e.id}>{e.name}</option>))}
-            </select>
-            <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })} className="border p-2 rounded-lg">
-              <option value="">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-            </select>
-            <input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="border p-2 rounded-lg"/>
-            <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="border p-2 rounded-lg"/>
+            {/* Assigned Services Table */}
+            <Card title="Assigned Services">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+                <select value={filters.room} onChange={(e) => setFilters({ ...filters, room: e.target.value })} className="border p-2 rounded-lg">
+                  <option value="">All Rooms</option>
+                  {assignedServices.map((s) => {
+                    const room = s.room;
+                    return room ? <option key={room.id} value={room.id}>Room {room.number}</option> : null;
+                  }).filter(Boolean)}
+                </select>
+                <select value={filters.employee} onChange={(e) => setFilters({ ...filters, employee: e.target.value })} className="border p-2 rounded-lg">
+                  <option value="">All Employees</option>
+                  {employees.map((e) => (<option key={e.id} value={e.id}>{e.name}</option>))}
+                </select>
+                <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })} className="border p-2 rounded-lg">
+                  <option value="">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                </select>
+                <input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="border p-2 rounded-lg" />
+                <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="border p-2 rounded-lg" />
+              </div>
+              {loading ? (
+                <div className="flex justify-center items-center h-48">
+                  <Loader2 size={48} className="animate-spin text-indigo-500" />
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border border-gray-200 rounded-lg">
+                    <thead className="bg-gray-100 text-gray-700 uppercase tracking-wider">
+                      <tr>
+                        <th className="py-3 px-4 text-left">Service</th>
+                        <th className="py-3 px-4 text-left">Employee</th>
+                        <th className="py-3 px-4 text-left">Room</th>
+                        <th className="py-3 px-4 text-left">In Progress</th>
+                        <th className="py-3 px-4 text-left">Avg. Completion Time</th>
+                        <th className="py-3 px-4 text-left">Assigned At</th>
+                        <th className="py-3 px-4 text-left">Status Changed</th>
+                        <th className="py-3 px-4 text-left">Completed Time</th>
+                        <th className="py-3 px-4 text-left">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredAssigned.map((s, idx) => (
+                        <tr key={s.id} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition-colors`}>
+                          <td className="p-3 border-t border-gray-200">{s.service?.name}</td>
+                          <td className="p-3 border-t border-gray-200">{s.employee?.name}</td>
+                          <td className="p-3 border-t border-gray-200">Room {s.room?.number}</td>
+                          <td className="p-3 border-t border-gray-200">
+                            <select value={s.status} onChange={(e) => handleStatusChange(s.id, e.target.value)} className="border p-2 rounded-lg bg-white">
+                              <option value="pending">Pending</option>
+                              <option value="in_progress">In Progress</option>
+                              <option value="completed">Completed</option>
+                            </select>
+                          </td>
+                          <td className="p-3 border-t border-gray-200 text-sm">
+                            {s.service?.average_completion_time ? (
+                              <span className="text-indigo-600 font-medium">{s.service.average_completion_time}</span>
+                            ) : (
+                              <span className="text-gray-400 italic">Not set</span>
+                            )}
+                          </td>
+                          <td className="p-3 border-t border-gray-200">{s.assigned_at && new Date(s.assigned_at).toLocaleString()}</td>
+                          <td className="p-3 border-t border-gray-200">
+                            {statusChangeTimes[s.id] ? (
+                              <span className="text-blue-600 font-medium text-sm">
+                                {new Date(statusChangeTimes[s.id]).toLocaleString()}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 italic text-sm">Not changed</span>
+                            )}
+                          </td>
+                          <td className="p-3 border-t border-gray-200">
+                            {s.last_used_at ? (
+                              <span className="text-green-600 font-medium">
+                                {new Date(s.last_used_at).toLocaleString()}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 italic">Never</span>
+                            )}
+                          </td>
+                          <td className="p-3 border-t border-gray-200">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleViewAssignedService(s)}
+                                className="px-3 py-1 rounded text-sm font-medium bg-blue-500 hover:bg-blue-600 text-white"
+                              >
+                                View
+                              </button>
+                              <button
+                                onClick={() => handleDeleteAssignedService(s.id)}
+                                className="px-3 py-1 rounded text-sm font-medium bg-red-500 hover:bg-red-600 text-white"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
           </div>
-          {loading ? (
-            <div className="flex justify-center items-center h-48">
-              <Loader2 size={48} className="animate-spin text-indigo-500" />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full border border-gray-200 rounded-lg">
-                <thead className="bg-gray-100 text-gray-700 uppercase tracking-wider">
-                  <tr>
-                    <th className="py-3 px-4 text-left">Service</th>
-                    <th className="py-3 px-4 text-left">Employee</th>
-                    <th className="py-3 px-4 text-left">Room</th>
-                    <th className="py-3 px-4 text-left">In Progress</th>
-                    <th className="py-3 px-4 text-left">Avg. Completion Time</th>
-                    <th className="py-3 px-4 text-left">Assigned At</th>
-                    <th className="py-3 px-4 text-left">Status Changed</th>
-                    <th className="py-3 px-4 text-left">Completed Time</th>
-                    <th className="py-3 px-4 text-left">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAssigned.map((s, idx) => (
-                    <tr key={s.id} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition-colors`}>
-                      <td className="p-3 border-t border-gray-200">{s.service?.name}</td>
-                      <td className="p-3 border-t border-gray-200">{s.employee?.name}</td>
-                      <td className="p-3 border-t border-gray-200">Room {s.room?.number}</td>
-                      <td className="p-3 border-t border-gray-200">
-                        <select value={s.status} onChange={(e) => handleStatusChange(s.id, e.target.value)} className="border p-2 rounded-lg bg-white">
-                          <option value="pending">Pending</option>
-                          <option value="in_progress">In Progress</option>
-                          <option value="completed">Completed</option>
-                        </select>
-                      </td>
-                      <td className="p-3 border-t border-gray-200 text-sm">
-                        {s.service?.average_completion_time ? (
-                          <span className="text-indigo-600 font-medium">{s.service.average_completion_time}</span>
-                        ) : (
-                          <span className="text-gray-400 italic">Not set</span>
-                        )}
-                      </td>
-                      <td className="p-3 border-t border-gray-200">{s.assigned_at && new Date(s.assigned_at).toLocaleString()}</td>
-                      <td className="p-3 border-t border-gray-200">
-                        {statusChangeTimes[s.id] ? (
-                          <span className="text-blue-600 font-medium text-sm">
-                            {new Date(statusChangeTimes[s.id]).toLocaleString()}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400 italic text-sm">Not changed</span>
-                        )}
-                      </td>
-                      <td className="p-3 border-t border-gray-200">
-                        {s.last_used_at ? (
-                          <span className="text-green-600 font-medium">
-                            {new Date(s.last_used_at).toLocaleString()}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400 italic">Never</span>
-                        )}
-                      </td>
-                      <td className="p-3 border-t border-gray-200">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleViewAssignedService(s)}
-                            className="px-3 py-1 rounded text-sm font-medium bg-blue-500 hover:bg-blue-600 text-white"
-                          >
-                            View
-                          </button>
-                          <button
-                            onClick={() => handleDeleteAssignedService(s.id)}
-                            className="px-3 py-1 rounded text-sm font-medium bg-red-500 hover:bg-red-600 text-white"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
-      </div>
         )}
 
         {/* Service Requests Tab */}
@@ -2757,690 +2793,742 @@ const Services = () => {
             </div>
 
             <Card title="Service Requests">
-          {loading ? (
-            <div className="flex justify-center items-center h-48">
-              <Loader2 size={48} className="animate-spin text-indigo-500" />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full border border-gray-200 rounded-lg">
-                <thead className="bg-gray-100 text-gray-700 uppercase tracking-wider">
-                  <tr>
-                    <th className="py-3 px-4 text-left">ID</th>
-                    <th className="py-3 px-4 text-left">Room</th>
-                    <th className="py-3 px-4 text-left">Food Order</th>
-                    <th className="py-3 px-4 text-left">Request Type</th>
-                    <th className="py-3 px-4 text-left">Description</th>
-                    <th className="py-3 px-4 text-left">Employee</th>
-                    <th className="py-3 px-4 text-left">Status</th>
-                    <th className="py-3 px-4 text-left">Avg. Completion Time</th>
-                    <th className="py-3 px-4 text-left">Created At</th>
-                    <th className="py-3 px-4 text-left">Completed At</th>
-                    <th className="py-3 px-4 text-left">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {serviceRequests.length === 0 ? (
-                    <tr>
-                      <td colSpan="11" className="py-8 text-center text-gray-500">
-                        No service requests found
-                      </td>
-                    </tr>
-                  ) : (
-                    serviceRequests.sort((a, b) => {
-                      // Sort: pending first, then in_progress, then others
-                      const statusOrder = { 'pending': 0, 'in_progress': 1, 'inventory_checked': 2, 'completed': 3, 'cancelled': 4 };
-                      const aOrder = statusOrder[a.status] ?? 5;
-                      const bOrder = statusOrder[b.status] ?? 5;
-                      if (aOrder !== bOrder) return aOrder - bOrder;
-                      // If same status, sort by created_at (newest first)
-                      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-                    }).map((request, idx) => {
-                      const isCheckoutRequest = request.is_checkout_request || request.id > 1000000;
-                      const checkoutRequestId = isCheckoutRequest ? (request.checkout_request_id || request.id - 1000000) : null;
-                      
-                      return (
-                      <tr key={request.id} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition-colors ${isCheckoutRequest ? 'bg-yellow-50' : ''}`}>
-                        <td className="p-3 border-t border-gray-200">
-                          #{isCheckoutRequest ? checkoutRequestId : request.id}
-                          {isCheckoutRequest && <span className="ml-2 text-xs text-yellow-600">(Checkout)</span>}
-                        </td>
-                        <td className="p-3 border-t border-gray-200">
-                          {request.room_number ? `Room ${request.room_number}` : `Room ID: ${request.room_id}`}
-                          {isCheckoutRequest && request.guest_name && (
-                            <div className="text-xs text-gray-600 mt-1">Guest: {request.guest_name}</div>
-                          )}
-                        </td>
-                        <td className="p-3 border-t border-gray-200">
-                          {request.request_type === "cleaning" ? (
-                            <span className="text-sm text-orange-600 font-medium">🧹 Cleaning Service</span>
-                          ) : request.request_type === "refill" ? (
-                            <span className="text-sm text-purple-600 font-medium">🔄 Refill Service</span>
-                          ) : isCheckoutRequest ? (
-                            <span className="text-sm text-gray-600">Checkout Verification</span>
-                          ) : (
-                            <div className="text-sm">
-                              {request.food_order_id ? (
-                                <>
-                                  <div>Order #{request.food_order_id}</div>
-                                  {request.food_order_amount && (
-                                    <div className="text-gray-600">₹{request.food_order_amount.toFixed(2)}</div>
-                                  )}
-                                  {request.food_order_status && (
-                                    <span className={`px-2 py-1 rounded text-xs ${
-                                      request.food_order_status === 'completed' ? 'bg-green-100 text-green-800' :
-                                      request.food_order_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                      'bg-gray-100 text-gray-800'
-                                    }`}>
-                                      {request.food_order_status}
-                                    </span>
-                                  )}
-                                </>
-                              ) : (
-                                <span className="text-gray-400 text-xs">No food order</span>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                        <td className="p-3 border-t border-gray-200">
-                          <span className={`px-2 py-1 rounded text-xs capitalize ${
-                            request.request_type === "cleaning" ? 'bg-orange-100 text-orange-800' :
-                            request.request_type === "refill" ? 'bg-purple-100 text-purple-800' :
-                            isCheckoutRequest ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
-                          }`}>
-                            {request.request_type === "cleaning" ? "🧹 cleaning" :
-                             request.request_type === "refill" ? "🔄 refill" :
-                             isCheckoutRequest ? 'checkout_verification' : (request.request_type || 'delivery')}
-                          </span>
-                        </td>
-                        <td className="p-3 border-t border-gray-200">
-                          <div className="max-w-xs truncate" title={request.description}>
-                            {request.description || '-'}
-                          </div>
-                        </td>
-                        <td className="p-3 border-t border-gray-200">
-                          {request.employee_name || request.employee_id ? (
-                            <span className="text-sm">{request.employee_name || `Employee #${request.employee_id}`}</span>
-                          ) : (
-                            <span className="text-gray-400 text-sm">Not assigned</span>
-                          )}
-                        </td>
-                        <td className="p-3 border-t border-gray-200">
-                          {isCheckoutRequest ? (
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                              request.status === 'completed' ? 'bg-green-100 text-green-800' :
-                              request.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                              request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {request.status || 'pending'}
-                            </span>
-                          ) : (
-                            <select
-                              value={request.status}
-                              onChange={(e) => handleUpdateRequestStatus(request.id, e.target.value)}
-                              className={`border p-2 rounded-lg bg-white text-sm ${
-                                request.status === 'completed' ? 'bg-green-50' :
-                                request.status === 'in_progress' ? 'bg-yellow-50' :
-                                request.status === 'cancelled' ? 'bg-red-50' :
-                                'bg-gray-50'
-                              }`}
-                            >
-                              <option value="pending">Pending</option>
-                              <option value="in_progress">In Progress</option>
-                              <option value="completed">Completed</option>
-                              <option value="cancelled">Cancelled</option>
-                            </select>
-                          )}
-                        </td>
-                        <td className="p-3 border-t border-gray-200 text-sm">
-                          {/* Average completion time would come from assigned service if any */}
-                          {request.service?.average_completion_time ? (
-                            <span className="text-indigo-600 font-medium">{request.service.average_completion_time}</span>
-                          ) : (
-                            <span className="text-gray-400 italic">-</span>
-                          )}
-                        </td>
-                        <td className="p-3 border-t border-gray-200 text-sm">
-                          {request.created_at ? new Date(request.created_at).toLocaleString() : '-'}
-                        </td>
-                        <td className="p-3 border-t border-gray-200 text-sm">
-                          {request.completed_at ? (
-                            <span className="text-green-600">
-                              {new Date(request.completed_at).toLocaleString()}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </td>
-                        <td className="p-3 border-t border-gray-200">
-                          <div className="flex gap-2">
-                            {isCheckoutRequest ? (
-                              <>
-                                {(request.status === "pending" || request.status === "in_progress" || request.status === "inventory_checked") ? (
-                                  <button
-                                    onClick={() => handleViewCheckoutInventory(checkoutRequestId)}
-                                    className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
-                                    title="View inventory details and verify"
-                                  >
-                                    ✓ Verify Inventory
-                                  </button>
-                                ) : request.status === "completed" ? (
-                                  <span className="px-3 py-1 rounded text-sm font-medium bg-green-100 text-green-800">
-                                    ✓ Completed
-                                  </span>
-                                ) : null}
-                              </>
-                            ) : (
-                              <>
-                                {request.status === "pending" && (
-                                  <button
-                                    onClick={() => handleQuickAssignFromRequest(request)}
-                                    className="px-3 py-1 rounded text-sm font-medium bg-green-500 hover:bg-green-600 text-white"
-                                    title="Quick assign service to this room"
-                                  >
-                                    Assign Service
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => handleDeleteRequest(request.id)}
-                                  className="px-3 py-1 rounded text-sm font-medium bg-red-500 hover:bg-red-600 text-white"
-                                >
-                                  Delete
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </td>
+              {loading ? (
+                <div className="flex justify-center items-center h-48">
+                  <Loader2 size={48} className="animate-spin text-indigo-500" />
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border border-gray-200 rounded-lg">
+                    <thead className="bg-gray-100 text-gray-700 uppercase tracking-wider">
+                      <tr>
+                        <th className="py-3 px-4 text-left">ID</th>
+                        <th className="py-3 px-4 text-left">Room</th>
+                        <th className="py-3 px-4 text-left">Food Order</th>
+                        <th className="py-3 px-4 text-left">Request Type</th>
+                        <th className="py-3 px-4 text-left">Description</th>
+                        <th className="py-3 px-4 text-left">Employee</th>
+                        <th className="py-3 px-4 text-left">Status</th>
+                        <th className="py-3 px-4 text-left">Avg. Completion Time</th>
+                        <th className="py-3 px-4 text-left">Created At</th>
+                        <th className="py-3 px-4 text-left">Completed At</th>
+                        <th className="py-3 px-4 text-left">Actions</th>
                       </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
+                    </thead>
+                    <tbody>
+                      {serviceRequests.length === 0 ? (
+                        <tr>
+                          <td colSpan="11" className="py-8 text-center text-gray-500">
+                            No service requests found
+                          </td>
+                        </tr>
+                      ) : (
+                        serviceRequests.sort((a, b) => {
+                          // Sort: pending first, then in_progress, then others
+                          const statusOrder = { 'pending': 0, 'in_progress': 1, 'inventory_checked': 2, 'completed': 3, 'cancelled': 4 };
+                          const aOrder = statusOrder[a.status] ?? 5;
+                          const bOrder = statusOrder[b.status] ?? 5;
+                          if (aOrder !== bOrder) return aOrder - bOrder;
+                          // If same status, sort by created_at (newest first)
+                          return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+                        }).map((request, idx) => {
+                          const isCheckoutRequest = request.is_checkout_request || request.id > 1000000;
+                          const checkoutRequestId = isCheckoutRequest ? (request.checkout_request_id || request.id - 1000000) : null;
+
+                          return (
+                            <tr key={request.id} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100 transition-colors ${isCheckoutRequest ? 'bg-yellow-50' : ''}`}>
+                              <td className="p-3 border-t border-gray-200">
+                                #{isCheckoutRequest ? checkoutRequestId : request.id}
+                                {isCheckoutRequest && <span className="ml-2 text-xs text-yellow-600">(Checkout)</span>}
+                              </td>
+                              <td className="p-3 border-t border-gray-200">
+                                {request.room_number ? `Room ${request.room_number}` : `Room ID: ${request.room_id}`}
+                                {isCheckoutRequest && request.guest_name && (
+                                  <div className="text-xs text-gray-600 mt-1">Guest: {request.guest_name}</div>
+                                )}
+                              </td>
+                              <td className="p-3 border-t border-gray-200">
+                                {request.request_type === "cleaning" ? (
+                                  <span className="text-sm text-orange-600 font-medium">🧹 Cleaning Service</span>
+                                ) : request.request_type === "refill" ? (
+                                  <span className="text-sm text-purple-600 font-medium">🔄 Refill Service</span>
+                                ) : isCheckoutRequest ? (
+                                  <span className="text-sm text-gray-600">Checkout Verification</span>
+                                ) : (
+                                  <div className="text-sm">
+                                    {request.food_order_id ? (
+                                      <>
+                                        <div>Order #{request.food_order_id}</div>
+                                        {request.food_order_amount && (
+                                          <div className="text-gray-600">₹{request.food_order_amount.toFixed(2)}</div>
+                                        )}
+                                        {request.food_order_status && (
+                                          <div className="flex flex-col gap-1 mt-1">
+                                            <span className={`px-2 py-1 rounded text-xs w-fit ${request.food_order_status === 'completed' ? 'bg-green-100 text-green-800' :
+                                              request.food_order_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-gray-100 text-gray-800'
+                                              }`}>
+                                              {request.food_order_status}
+                                            </span>
+
+                                            {/* Show Mark as Paid button if not paid yet */}
+                                            {request.food_order_status !== 'cancelled' && (
+                                              <button
+                                                onClick={() => handleMarkOrderPaid(request)}
+                                                className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 px-2 py-1 rounded border border-blue-200 transition-colors text-left w-fit"
+                                              >
+                                                Mark as Paid
+                                              </button>
+                                            )}
+                                          </div>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <span className="text-gray-400 text-xs">No food order</span>
+                                    )}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="p-3 border-t border-gray-200">
+                                <span className={`px-2 py-1 rounded text-xs capitalize ${request.request_type === "cleaning" ? 'bg-orange-100 text-orange-800' :
+                                  request.request_type === "refill" ? 'bg-purple-100 text-purple-800' :
+                                    isCheckoutRequest ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
+                                  }`}>
+                                  {request.request_type === "cleaning" ? "🧹 cleaning" :
+                                    request.request_type === "refill" ? "🔄 refill" :
+                                      isCheckoutRequest ? 'checkout_verification' : (request.request_type || 'delivery')}
+                                </span>
+                              </td>
+                              <td className="p-3 border-t border-gray-200">
+                                {request.request_type === "refill" && request.refill_data && request.refill_data.length > 0 ? (
+                                  <div className="max-w-md">
+                                    <div className="text-sm font-medium text-gray-700 mb-2">
+                                      Room {request.room_number} - Refill Required
+                                    </div>
+                                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-2">
+                                      <div className="text-xs font-semibold text-purple-800 mb-1">Items to Refill:</div>
+                                      <table className="w-full text-xs">
+                                        <thead>
+                                          <tr className="border-b border-purple-200">
+                                            <th className="text-left py-1 text-purple-700">Item</th>
+                                            <th className="text-right py-1 text-purple-700">Consumed</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {request.refill_data.map((item, idx) => (
+                                            <tr key={idx} className="border-b border-purple-100 last:border-0">
+                                              <td className="py-1 text-gray-700">
+                                                {item.item_name}
+                                                {item.item_code && <span className="text-gray-500 ml-1">({item.item_code})</span>}
+                                              </td>
+                                              <td className="text-right py-1 font-medium text-purple-700">
+                                                {item.quantity_to_refill} {item.unit}
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="max-w-xs truncate" title={request.description}>
+                                    {request.description || '-'}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="p-3 border-t border-gray-200">
+                                {request.employee_name || request.employee_id ? (
+                                  <span className="text-sm">{request.employee_name || `Employee #${request.employee_id}`}</span>
+                                ) : (
+                                  <span className="text-gray-400 text-sm">Not assigned</span>
+                                )}
+                              </td>
+                              <td className="p-3 border-t border-gray-200">
+                                {isCheckoutRequest ? (
+                                  <span className={`px-2 py-1 rounded text-xs font-medium ${request.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                    request.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                      request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-gray-100 text-gray-800'
+                                    }`}>
+                                    {request.status || 'pending'}
+                                  </span>
+                                ) : (
+                                  <select
+                                    value={request.status}
+                                    onChange={(e) => handleUpdateRequestStatus(request.id, e.target.value)}
+                                    className={`border p-2 rounded-lg bg-white text-sm ${request.status === 'completed' ? 'bg-green-50' :
+                                      request.status === 'in_progress' ? 'bg-yellow-50' :
+                                        request.status === 'cancelled' ? 'bg-red-50' :
+                                          'bg-gray-50'
+                                      }`}
+                                  >
+                                    <option value="pending">Pending</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                  </select>
+                                )}
+                              </td>
+                              <td className="p-3 border-t border-gray-200 text-sm">
+                                {/* Average completion time would come from assigned service if any */}
+                                {request.service?.average_completion_time ? (
+                                  <span className="text-indigo-600 font-medium">{request.service.average_completion_time}</span>
+                                ) : (
+                                  <span className="text-gray-400 italic">-</span>
+                                )}
+                              </td>
+                              <td className="p-3 border-t border-gray-200 text-sm">
+                                {request.created_at ? new Date(request.created_at).toLocaleString() : '-'}
+                              </td>
+                              <td className="p-3 border-t border-gray-200 text-sm">
+                                {request.completed_at ? (
+                                  <span className="text-green-600">
+                                    {new Date(request.completed_at).toLocaleString()}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </td>
+                              <td className="p-3 border-t border-gray-200">
+                                <div className="flex gap-2">
+                                  {isCheckoutRequest ? (
+                                    <>
+                                      {(request.status === "pending" || request.status === "in_progress" || request.status === "inventory_checked") ? (
+                                        <>
+                                          {!request.employee_id ? (
+                                            <button
+                                              onClick={() => handleQuickAssignFromRequest(request)}
+                                              className="px-4 py-2 rounded-lg text-sm font-semibold bg-orange-500 hover:bg-orange-600 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                                              title="Assign employee first before verification"
+                                            >
+                                              ⚠ Assign Employee First
+                                            </button>
+                                          ) : (
+                                            <button
+                                              onClick={() => handleViewCheckoutInventory(checkoutRequestId)}
+                                              className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                                              title="View inventory details and verify"
+                                            >
+                                              ✓ Verify Inventory
+                                            </button>
+                                          )}
+                                        </>
+                                      ) : request.status === "completed" ? (
+                                        <span className="px-3 py-1 rounded text-sm font-medium bg-green-100 text-green-800">
+                                          ✓ Completed
+                                        </span>
+                                      ) : null}
+                                    </>
+                                  ) : (
+                                    <>
+                                      {request.status === "pending" && !request.employee_id && (
+                                        <button
+                                          onClick={() => handleQuickAssignFromRequest(request)}
+                                          className="px-3 py-1 rounded text-sm font-medium bg-green-500 hover:bg-green-600 text-white"
+                                          title="Quick assign service to this room"
+                                        >
+                                          Assign Service
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => handleDeleteRequest(request.id)}
+                                        className="px-3 py-1 rounded text-sm font-medium bg-red-500 hover:bg-red-600 text-white"
+                                      >
+                                        Delete
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
           </div>
         )}
 
-      {/* Quick Assign Service Modal */}
-      {quickAssignModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">Assign Service</h2>
-                <button
-                  onClick={() => setQuickAssignModal(null)}
-                  className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
-                >
-                  ×
-                </button>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Room
-                  </label>
-                  <input
-                    type="text"
-                    value={`Room ${quickAssignModal.request.room_number || quickAssignModal.request.room_id}`}
-                    disabled
-                    className="w-full border p-3 rounded-lg bg-gray-100 text-gray-600"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Service
-                  </label>
-                  <input
-                    type="text"
-                    value="Delivery"
-                    disabled
-                    className="w-full border p-3 rounded-lg bg-gray-100 text-gray-600"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Employee <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={quickAssignModal.employeeId}
-                    onChange={(e) => setQuickAssignModal({ ...quickAssignModal, employeeId: e.target.value })}
-                    className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-indigo-400"
+        {/* Quick Assign Service Modal */}
+        {quickAssignModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-gray-800">Assign Service</h2>
+                  <button
+                    onClick={() => setQuickAssignModal(null)}
+                    className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
                   >
-                    <option value="">-- Select Employee --</option>
-                    {employees.map((employee) => (
-                      <option key={employee.id} value={employee.id}>
-                        {employee.name}
-                      </option>
-                    ))}
-                  </select>
+                    ×
+                  </button>
                 </div>
-              </div>
-              
-              <div className="mt-6 flex justify-end gap-3">
-                <button
-                  onClick={() => setQuickAssignModal(null)}
-                  className="px-6 py-2 rounded-lg text-sm font-medium bg-gray-200 hover:bg-gray-300 text-gray-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleQuickAssignSubmit}
-                  className="px-6 py-2 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white"
-                >
-                  Assign Service
-                </button>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Room
+                    </label>
+                    <input
+                      type="text"
+                      value={`Room ${quickAssignModal.request.room_number || quickAssignModal.request.room_id}`}
+                      disabled
+                      className="w-full border p-3 rounded-lg bg-gray-100 text-gray-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Service
+                    </label>
+                    <input
+                      type="text"
+                      value="Delivery"
+                      disabled
+                      className="w-full border p-3 rounded-lg bg-gray-100 text-gray-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Select Employee <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={quickAssignModal.employeeId}
+                      onChange={(e) => setQuickAssignModal({ ...quickAssignModal, employeeId: e.target.value })}
+                      className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-indigo-400"
+                    >
+                      <option value="">-- Select Employee --</option>
+                      {employees.map((employee) => (
+                        <option key={employee.id} value={employee.id}>
+                          {employee.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex justify-end gap-3">
+                  <button
+                    onClick={() => setQuickAssignModal(null)}
+                    className="px-6 py-2 rounded-lg text-sm font-medium bg-gray-200 hover:bg-gray-300 text-gray-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleQuickAssignSubmit}
+                    className="px-6 py-2 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white"
+                  >
+                    Assign Service
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* View Assigned Service Modal */}
-      {viewingAssignedService && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">Assigned Service Details</h2>
-                <button
-                  onClick={() => setViewingAssignedService(null)}
-                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
-                >
-                  ×
-                </button>
-              </div>
+        {/* View Assigned Service Modal */}
+        {viewingAssignedService && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-gray-800">Assigned Service Details</h2>
+                  <button
+                    onClick={() => setViewingAssignedService(null)}
+                    className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                  >
+                    ×
+                  </button>
+                </div>
 
-              <div className="space-y-6">
-                {/* Service Information */}
-                {viewingAssignedService.service && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h3 className="font-semibold text-lg text-gray-800 mb-3">Service Information</h3>
-                    <div className="space-y-2">
-                      <div>
-                        <span className="font-medium text-gray-700">Name:</span>
-                        <span className="ml-2 text-gray-900">{viewingAssignedService.service.name}</span>
-                      </div>
-                      {viewingAssignedService.service.description && (
+                <div className="space-y-6">
+                  {/* Service Information */}
+                  {viewingAssignedService.service && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h3 className="font-semibold text-lg text-gray-800 mb-3">Service Information</h3>
+                      <div className="space-y-2">
                         <div>
-                          <span className="font-medium text-gray-700">Description:</span>
-                          <p className="ml-2 text-gray-900 mt-1">{viewingAssignedService.service.description}</p>
+                          <span className="font-medium text-gray-700">Name:</span>
+                          <span className="ml-2 text-gray-900">{viewingAssignedService.service.name}</span>
+                        </div>
+                        {viewingAssignedService.service.description && (
+                          <div>
+                            <span className="font-medium text-gray-700">Description:</span>
+                            <p className="ml-2 text-gray-900 mt-1">{viewingAssignedService.service.description}</p>
+                          </div>
+                        )}
+                        <div>
+                          <span className="font-medium text-gray-700">Charges:</span>
+                          <span className="ml-2 text-gray-900 font-semibold">₹{viewingAssignedService.service.charges}</span>
+                        </div>
+                        {viewingAssignedService.service.images && viewingAssignedService.service.images.length > 0 && (
+                          <div className="mt-2">
+                            <span className="font-medium text-gray-700">Images:</span>
+                            <div className="flex gap-2 mt-2">
+                              {viewingAssignedService.service.images.slice(0, 3).map((img, idx) => (
+                                <img
+                                  key={idx}
+                                  src={getImageUrl(img.image_url)}
+                                  alt={`${viewingAssignedService.service.name} ${idx + 1}`}
+                                  className="w-20 h-20 object-cover rounded border"
+                                  onError={(e) => {
+                                    e.target.src = '/placeholder-image.png';
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Assignment Information */}
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <h3 className="font-semibold text-lg text-gray-800 mb-3">Assignment Information</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className="font-medium text-gray-700">Employee:</span>
+                        <span className="ml-2 text-gray-900">{viewingAssignedService.employee?.name || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700">Room:</span>
+                        <span className="ml-2 text-gray-900">Room {viewingAssignedService.room?.number || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700">Status:</span>
+                        <span className="ml-2 text-gray-900 capitalize">{viewingAssignedService.status || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700">Assigned At:</span>
+                        <span className="ml-2 text-gray-900">
+                          {viewingAssignedService.assigned_at ? new Date(viewingAssignedService.assigned_at).toLocaleString() : 'N/A'}
+                        </span>
+                      </div>
+                      {viewingAssignedService.last_used_at && (
+                        <div>
+                          <span className="font-medium text-gray-700">Completed Time:</span>
+                          <span className="ml-2 text-gray-900 font-semibold text-green-600">
+                            {new Date(viewingAssignedService.last_used_at).toLocaleString()}
+                          </span>
                         </div>
                       )}
-                      <div>
-                        <span className="font-medium text-gray-700">Charges:</span>
-                        <span className="ml-2 text-gray-900 font-semibold">₹{viewingAssignedService.service.charges}</span>
-                      </div>
-                      {viewingAssignedService.service.images && viewingAssignedService.service.images.length > 0 && (
-                        <div className="mt-2">
-                          <span className="font-medium text-gray-700">Images:</span>
-                          <div className="flex gap-2 mt-2">
-                            {viewingAssignedService.service.images.slice(0, 3).map((img, idx) => (
-                              <img
-                                key={idx}
-                                src={getImageUrl(img.image_url)}
-                                alt={`${viewingAssignedService.service.name} ${idx + 1}`}
-                                className="w-20 h-20 object-cover rounded border"
-                                onError={(e) => {
-                                  e.target.src = '/placeholder-image.png';
-                                }}
-                              />
+                    </div>
+                  </div>
+
+                  {/* Inventory Items Needed */}
+                  {(() => {
+                    const inventoryItems = viewingAssignedService.service?.inventory_items;
+                    console.log("[DEBUG Modal] Inventory items check:", {
+                      hasService: !!viewingAssignedService.service,
+                      hasInventoryItems: !!inventoryItems,
+                      inventoryItemsType: typeof inventoryItems,
+                      inventoryItemsIsArray: Array.isArray(inventoryItems),
+                      inventoryItemsLength: inventoryItems?.length,
+                      inventoryItemsValue: inventoryItems
+                    });
+
+                    if (inventoryItems && Array.isArray(inventoryItems) && inventoryItems.length > 0) {
+                      return (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                          <h3 className="font-semibold text-lg text-gray-800 mb-3">Inventory Items Needed</h3>
+                          <div className="space-y-2">
+                            {inventoryItems.map((item, idx) => (
+                              <div key={idx} className="flex items-center justify-between p-3 bg-white rounded border border-green-200">
+                                <div className="flex-1">
+                                  <span className="font-medium text-gray-800">{item.name}</span>
+                                  {item.item_code && (
+                                    <span className="ml-2 text-sm text-gray-600">({item.item_code})</span>
+                                  )}
+                                </div>
+                                <div className="text-right">
+                                  <span className="text-sm text-gray-600">
+                                    {item.quantity} {item.unit}
+                                  </span>
+                                  {item.unit_price > 0 && (
+                                    <span className="ml-2 text-sm text-gray-500">
+                                      @ ₹{item.unit_price}/{item.unit}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                             ))}
                           </div>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Assignment Information */}
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-lg text-gray-800 mb-3">Assignment Information</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span className="font-medium text-gray-700">Employee:</span>
-                      <span className="ml-2 text-gray-900">{viewingAssignedService.employee?.name || 'N/A'}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-700">Room:</span>
-                      <span className="ml-2 text-gray-900">Room {viewingAssignedService.room?.number || 'N/A'}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-700">Status:</span>
-                      <span className="ml-2 text-gray-900 capitalize">{viewingAssignedService.status || 'N/A'}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-700">Assigned At:</span>
-                      <span className="ml-2 text-gray-900">
-                        {viewingAssignedService.assigned_at ? new Date(viewingAssignedService.assigned_at).toLocaleString() : 'N/A'}
-                      </span>
-                    </div>
-                    {viewingAssignedService.last_used_at && (
-                      <div>
-                        <span className="font-medium text-gray-700">Completed Time:</span>
-                        <span className="ml-2 text-gray-900 font-semibold text-green-600">
-                          {new Date(viewingAssignedService.last_used_at).toLocaleString()}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Inventory Items Needed */}
-                {(() => {
-                  const inventoryItems = viewingAssignedService.service?.inventory_items;
-                  console.log("[DEBUG Modal] Inventory items check:", {
-                    hasService: !!viewingAssignedService.service,
-                    hasInventoryItems: !!inventoryItems,
-                    inventoryItemsType: typeof inventoryItems,
-                    inventoryItemsIsArray: Array.isArray(inventoryItems),
-                    inventoryItemsLength: inventoryItems?.length,
-                    inventoryItemsValue: inventoryItems
-                  });
-                  
-                  if (inventoryItems && Array.isArray(inventoryItems) && inventoryItems.length > 0) {
-                    return (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <h3 className="font-semibold text-lg text-gray-800 mb-3">Inventory Items Needed</h3>
-                        <div className="space-y-2">
-                          {inventoryItems.map((item, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-3 bg-white rounded border border-green-200">
-                              <div className="flex-1">
-                                <span className="font-medium text-gray-800">{item.name}</span>
-                                {item.item_code && (
-                                  <span className="ml-2 text-sm text-gray-600">({item.item_code})</span>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                <span className="text-sm text-gray-600">
-                                  {item.quantity} {item.unit}
-                                </span>
-                                {item.unit_price > 0 && (
-                                  <span className="ml-2 text-sm text-gray-500">
-                                    @ ₹{item.unit_price}/{item.unit}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          ))}
+                      );
+                    } else {
+                      return (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                          <p className="text-sm text-gray-600 italic">
+                            No inventory items required for this service.
+                            {inventoryItems && Array.isArray(inventoryItems) && inventoryItems.length === 0 && (
+                              <span className="block mt-1 text-xs">(Service has empty inventory_items array)</span>
+                            )}
+                            {!inventoryItems && (
+                              <span className="block mt-1 text-xs">(Service has no inventory_items property)</span>
+                            )}
+                          </p>
                         </div>
-                      </div>
-                    );
-                  } else {
-                    return (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                        <p className="text-sm text-gray-600 italic">
-                          No inventory items required for this service.
-                          {inventoryItems && Array.isArray(inventoryItems) && inventoryItems.length === 0 && (
-                            <span className="block mt-1 text-xs">(Service has empty inventory_items array)</span>
-                          )}
-                          {!inventoryItems && (
-                            <span className="block mt-1 text-xs">(Service has no inventory_items property)</span>
-                          )}
-                        </p>
-                      </div>
-                    );
-                  }
-                })()}
+                      );
+                    }
+                  })()}
 
-                {/* Returned Inventory Items */}
-                {returnedItems && returnedItems.length > 0 && (
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                    <h3 className="font-semibold text-lg text-gray-800 mb-3">Returned Inventory Items</h3>
-                    <div className="space-y-2">
-                      {returnedItems.map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-white rounded border border-purple-200">
-                          <div className="flex-1">
-                            <span className="font-medium text-gray-800">{item.item?.name || item.item_name || 'Unknown Item'}</span>
-                            {item.item?.item_code && (
-                              <span className="ml-2 text-sm text-gray-600">({item.item.item_code})</span>
-                            )}
-                            {item.status === "returned" && (
-                              <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">Fully Returned</span>
-                            )}
-                            {item.status === "partially_returned" && (
-                              <span className="ml-2 px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded">Partially Returned</span>
-                            )}
-                          </div>
-                          <div className="text-right">
-                            <div className="text-sm text-gray-600">
-                              <div>Assigned: {item.quantity_assigned} {item.item?.unit || item.unit || 'pcs'}</div>
-                              <div>Used: {item.quantity_used} {item.item?.unit || item.unit || 'pcs'}</div>
-                              <div className="font-semibold text-green-600">
-                                Returned: {item.quantity_returned} {item.item?.unit || item.unit || 'pcs'}
+                  {/* Returned Inventory Items */}
+                  {returnedItems && returnedItems.length > 0 && (
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                      <h3 className="font-semibold text-lg text-gray-800 mb-3">Returned Inventory Items</h3>
+                      <div className="space-y-2">
+                        {returnedItems.map((item, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-3 bg-white rounded border border-purple-200">
+                            <div className="flex-1">
+                              <span className="font-medium text-gray-800">{item.item?.name || item.item_name || 'Unknown Item'}</span>
+                              {item.item?.item_code && (
+                                <span className="ml-2 text-sm text-gray-600">({item.item.item_code})</span>
+                              )}
+                              {item.status === "returned" && (
+                                <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">Fully Returned</span>
+                              )}
+                              {item.status === "partially_returned" && (
+                                <span className="ml-2 px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded">Partially Returned</span>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm text-gray-600">
+                                <div>Assigned: {item.quantity_assigned} {item.item?.unit || item.unit || 'pcs'}</div>
+                                <div>Used: {item.quantity_used} {item.item?.unit || item.unit || 'pcs'}</div>
+                                <div className="font-semibold text-green-600">
+                                  Returned: {item.quantity_returned} {item.item?.unit || item.unit || 'pcs'}
+                                </div>
+                                {item.balance_quantity > 0 && (
+                                  <div className="text-orange-600">
+                                    Balance: {item.balance_quantity} {item.item?.unit || item.unit || 'pcs'}
+                                  </div>
+                                )}
                               </div>
-                              {item.balance_quantity > 0 && (
-                                <div className="text-orange-600">
-                                  Balance: {item.balance_quantity} {item.item?.unit || item.unit || 'pcs'}
+                              {item.returned_at && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Returned: {new Date(item.returned_at).toLocaleString()}
                                 </div>
                               )}
                             </div>
-                            {item.returned_at && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                Returned: {new Date(item.returned_at).toLocaleString()}
-                              </div>
-                            )}
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {(!returnedItems || returnedItems.length === 0) && viewingAssignedService.status === "completed" && (
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <p className="text-sm text-gray-600 italic">No inventory items have been returned yet.</p>
-                  </div>
-                )}
-              </div>
+                  {(!returnedItems || returnedItems.length === 0) && viewingAssignedService.status === "completed" && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                      <p className="text-sm text-gray-600 italic">No inventory items have been returned yet.</p>
+                    </div>
+                  )}
+                </div>
 
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={() => {
-                    setViewingAssignedService(null);
-                    setReturnedItems([]);
-                  }}
-                  className="px-6 py-2 rounded-lg text-sm font-medium bg-gray-500 hover:bg-gray-600 text-white"
-                >
-                  Close
-                </button>
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => {
+                      setViewingAssignedService(null);
+                      setReturnedItems([]);
+                    }}
+                    className="px-6 py-2 rounded-lg text-sm font-medium bg-gray-500 hover:bg-gray-600 text-white"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Return Inventory Modal - When completing service */}
-      {completingServiceId && inventoryAssignments.length > 0 && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">Return Inventory Items</h2>
-                <button
-                  onClick={() => {
-                    setCompletingServiceId(null);
-                    setInventoryAssignments([]);
-                    setReturnQuantities({});
-                  }}
-                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
-                >
-                  ×
-                </button>
-              </div>
+        {/* Return Inventory Modal - When completing service */}
+        {completingServiceId && inventoryAssignments.length > 0 && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-gray-800">Return Inventory Items</h2>
+                  <button
+                    onClick={() => {
+                      setCompletingServiceId(null);
+                      setInventoryAssignments([]);
+                      setReturnQuantities({});
+                    }}
+                    className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                  >
+                    ×
+                  </button>
+                </div>
 
-              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-gray-700 font-semibold mb-2">
-                  📦 Return Balance Inventory Items
-                </p>
-                <p className="text-sm text-gray-600">
-                  Return unused inventory items (balance) that were assigned but not used in this service. 
-                  Return quantity cannot exceed the balance quantity. All returns will be added back to inventory stock.
-                </p>
-              </div>
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-gray-700 font-semibold mb-2">
+                    📦 Return Balance Inventory Items
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Return unused inventory items (balance) that were assigned but not used in this service.
+                    Return quantity cannot exceed the balance quantity. All returns will be added back to inventory stock.
+                  </p>
+                </div>
 
-              <div className="space-y-4 mb-6">
-                {inventoryAssignments.map((assignment) => {
-                  const balance = assignment.balance_quantity || 0;
-                  const assignedQty = assignment.quantity_assigned || 0;
-                  const usedQty = assignment.quantity_used || 0;
-                  const alreadyReturned = assignment.quantity_returned || 0;
-                  const maxReturnable = balance; // Can return all balance (unused) items
-                  return (
-                    <div key={assignment.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-800">{assignment.item?.name || 'Unknown Item'}</h4>
-                          {assignment.item?.item_code && (
-                            <p className="text-sm text-gray-600">Code: {assignment.item.item_code}</p>
-                          )}
-                          <p className="text-xs text-gray-500 mt-1">
-                            Service: {assignment.assigned_service?.service?.name || 'N/A'}
-                          </p>
+                <div className="space-y-4 mb-6">
+                  {inventoryAssignments.map((assignment) => {
+                    const balance = assignment.balance_quantity || 0;
+                    const assignedQty = assignment.quantity_assigned || 0;
+                    const usedQty = assignment.quantity_used || 0;
+                    const alreadyReturned = assignment.quantity_returned || 0;
+                    const maxReturnable = balance; // Can return all balance (unused) items
+                    return (
+                      <div key={assignment.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-800">{assignment.item?.name || 'Unknown Item'}</h4>
+                            {assignment.item?.item_code && (
+                              <p className="text-sm text-gray-600">Code: {assignment.item.item_code}</p>
+                            )}
+                            <p className="text-xs text-gray-500 mt-1">
+                              Service: {assignment.assigned_service?.service?.name || 'N/A'}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-gray-600">
+                              Assigned: {assignedQty} {assignment.item?.unit || 'pcs'}
+                            </p>
+                            <p className="text-sm font-semibold text-green-600">
+                              Used: {usedQty} {assignment.item?.unit || 'pcs'}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              Already Returned: {alreadyReturned} {assignment.item?.unit || 'pcs'}
+                            </p>
+                            <p className="text-sm font-semibold text-orange-600">
+                              Balance (Unused): {balance} {assignment.item?.unit || 'pcs'}
+                            </p>
+                            <p className="text-sm font-semibold text-blue-600 mt-1">
+                              Max Returnable: {maxReturnable} {assignment.item?.unit || 'pcs'}
+                            </p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm text-gray-600">
-                            Assigned: {assignedQty} {assignment.item?.unit || 'pcs'}
-                          </p>
-                          <p className="text-sm font-semibold text-green-600">
-                            Used: {usedQty} {assignment.item?.unit || 'pcs'}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            Already Returned: {alreadyReturned} {assignment.item?.unit || 'pcs'}
-                          </p>
-                          <p className="text-sm font-semibold text-orange-600">
-                            Balance (Unused): {balance} {assignment.item?.unit || 'pcs'}
-                          </p>
-                          <p className="text-sm font-semibold text-blue-600 mt-1">
-                            Max Returnable: {maxReturnable} {assignment.item?.unit || 'pcs'}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="mt-3">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Quantity to Return (balance/unused items):
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          max={maxReturnable}
-                          step="0.01"
-                          value={returnQuantities[assignment.id] !== undefined ? returnQuantities[assignment.id] : 0}
-                          onChange={(e) => {
-                            const inputValue = e.target.value;
-                            // Allow empty string for deletion
-                            if (inputValue === '') {
-                              setReturnQuantities({
-                                ...returnQuantities,
-                                [assignment.id]: ''
-                              });
-                              return;
-                            }
-                            // Parse the value
-                            const val = parseFloat(inputValue);
-                            // Allow NaN temporarily while user is typing (e.g., "0.")
-                            if (isNaN(val)) {
-                              setReturnQuantities({
-                                ...returnQuantities,
-                                [assignment.id]: inputValue
-                              });
-                              return;
-                            }
-                            // Validate: cannot exceed balance quantity
-                            const clampedVal = Math.max(0, Math.min(val, maxReturnable));
-                            setReturnQuantities({
-                              ...returnQuantities,
-                              [assignment.id]: clampedVal
-                            });
-                          }}
-                          onBlur={(e) => {
-                            // On blur, ensure we have a valid number
-                            const val = parseFloat(e.target.value);
-                            if (isNaN(val) || val < 0) {
-                              setReturnQuantities({
-                                ...returnQuantities,
-                                [assignment.id]: 0
-                              });
-                            } else {
-                              const clampedVal = Math.min(val, maxReturnable);
+                        <div className="mt-3">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Quantity to Return (balance/unused items):
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            max={maxReturnable}
+                            step="0.01"
+                            value={returnQuantities[assignment.id] !== undefined ? returnQuantities[assignment.id] : 0}
+                            onChange={(e) => {
+                              const inputValue = e.target.value;
+                              // Allow empty string for deletion
+                              if (inputValue === '') {
+                                setReturnQuantities({
+                                  ...returnQuantities,
+                                  [assignment.id]: ''
+                                });
+                                return;
+                              }
+                              // Parse the value
+                              const val = parseFloat(inputValue);
+                              // Allow NaN temporarily while user is typing (e.g., "0.")
+                              if (isNaN(val)) {
+                                setReturnQuantities({
+                                  ...returnQuantities,
+                                  [assignment.id]: inputValue
+                                });
+                                return;
+                              }
+                              // Validate: cannot exceed balance quantity
+                              const clampedVal = Math.max(0, Math.min(val, maxReturnable));
                               setReturnQuantities({
                                 ...returnQuantities,
                                 [assignment.id]: clampedVal
                               });
-                            }
-                          }}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Maximum returnable: {maxReturnable} {assignment.item?.unit || 'pcs'} (based on balance/unused quantity)
-                        </p>
-                        {balance > 0 && (
-                          <p className="text-xs text-blue-600 mt-1 font-semibold">
-                            ✓ {balance} {assignment.item?.unit || 'pcs'} available to return (unused items)
-                          </p>
-                        )}
-                        {balance === 0 && (
+                            }}
+                            onBlur={(e) => {
+                              // On blur, ensure we have a valid number
+                              const val = parseFloat(e.target.value);
+                              if (isNaN(val) || val < 0) {
+                                setReturnQuantities({
+                                  ...returnQuantities,
+                                  [assignment.id]: 0
+                                });
+                              } else {
+                                const clampedVal = Math.min(val, maxReturnable);
+                                setReturnQuantities({
+                                  ...returnQuantities,
+                                  [assignment.id]: clampedVal
+                                });
+                              }
+                            }}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
                           <p className="text-xs text-gray-500 mt-1">
-                            No balance items to return (all items were used or already returned)
+                            Maximum returnable: {maxReturnable} {assignment.item?.unit || 'pcs'} (based on balance/unused quantity)
                           </p>
-                        )}
+                          {balance > 0 && (
+                            <p className="text-xs text-blue-600 mt-1 font-semibold">
+                              ✓ {balance} {assignment.item?.unit || 'pcs'} available to return (unused items)
+                            </p>
+                          )}
+                          {balance === 0 && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              No balance items to return (all items were used or already returned)
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
 
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => {
-                    setCompletingServiceId(null);
-                    setInventoryAssignments([]);
-                    setReturnQuantities({});
-                  }}
-                  className="px-6 py-2 rounded-lg text-sm font-medium bg-gray-500 hover:bg-gray-600 text-white"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={async () => {
-                    // Complete without returns
-                    if (!completingServiceId) return;
-                    try {
-                      await api.patch(`/services/assigned/${completingServiceId}`, {
-                        status: "completed",
-                        inventory_returns: null
-                      });
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => {
                       setCompletingServiceId(null);
                       setInventoryAssignments([]);
                       setReturnQuantities({});
-                      fetchAll();
-                      alert("Service marked as completed without returning inventory items.");
-                    } catch (error) {
-                      console.error("Failed to complete service:", error);
-                      alert(`Failed to complete service: ${error.response?.data?.detail || error.message}`);
-                    }
-                  }}
-                  className="px-6 py-2 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Complete Without Returns
-                </button>
-                <button
-                  onClick={handleCompleteWithReturns}
-                  className="px-6 py-2 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white"
-                >
-                  Complete & Return Items
-                </button>
+                    }}
+                    className="px-6 py-2 rounded-lg text-sm font-medium bg-gray-500 hover:bg-gray-600 text-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      // Complete without returns
+                      if (!completingServiceId) return;
+                      try {
+                        await api.patch(`/services/assigned/${completingServiceId}`, {
+                          status: "completed",
+                          inventory_returns: null
+                        });
+                        setCompletingServiceId(null);
+                        setInventoryAssignments([]);
+                        setReturnQuantities({});
+                        fetchAll();
+                        alert("Service marked as completed without returning inventory items.");
+                      } catch (error) {
+                        console.error("Failed to complete service:", error);
+                        alert(`Failed to complete service: ${error.response?.data?.detail || error.message}`);
+                      }
+                    }}
+                    className="px-6 py-2 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Complete Without Returns
+                  </button>
+                  <button
+                    onClick={handleCompleteWithReturns}
+                    className="px-6 py-2 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    Complete & Return Items
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
       {/* Checkout Inventory Verification Modal */}
       {checkoutInventoryModal && checkoutInventoryDetails && (
@@ -3454,7 +3542,7 @@ const Services = () => {
                 <p><strong>Location:</strong> {checkoutInventoryDetails.location_name}</p>
               )}
             </div>
-            
+
             {checkoutInventoryDetails.items && checkoutInventoryDetails.items.length > 0 ? (
               <div className="mb-4">
                 <h3 className="text-lg font-semibold mb-2">Current Inventory Items:</h3>
@@ -3465,18 +3553,41 @@ const Services = () => {
                         <th className="px-4 py-2 text-left">Item Name</th>
                         <th className="px-4 py-2 text-center">Complimentary</th>
                         <th className="px-4 py-2 text-center">Payable</th>
-                        <th className="px-4 py-2 text-center">Total Quantity</th>
-                        <th className="px-4 py-2 text-right">Stock Value</th>
+                        <th className="px-4 py-2 text-center">Total Stock</th>
+                        <th className="px-4 py-2 text-center">Used Qty</th>
+                        <th className="px-4 py-2 text-center">Missing Qty</th>
                       </tr>
                     </thead>
                     <tbody>
                       {checkoutInventoryDetails.items.map((item, idx) => (
                         <tr key={idx} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                          <td className="px-4 py-2">{item.name}</td>
+                          <td className="px-4 py-2">
+                            <div className="font-medium">{item.name}</div>
+                            {item.item_code && <div className="text-xs text-gray-500">{item.item_code}</div>}
+                          </td>
                           <td className="px-4 py-2 text-center text-green-600">{item.complimentary_qty || 0}</td>
                           <td className="px-4 py-2 text-center text-red-600">{item.payable_qty || 0}</td>
                           <td className="px-4 py-2 text-center">{item.current_stock || 0}</td>
-                          <td className="px-4 py-2 text-right">₹{item.stock_value || 0}</td>
+                          <td className="px-4 py-2 text-center">
+                            <input
+                              type="number"
+                              min="0"
+                              className="w-20 border rounded p-1 text-center focus:ring-2 focus:ring-blue-500 outline-none"
+                              value={item.used_qty || ''}
+                              onChange={(e) => handleUpdateInventoryVerification(idx, 'used_qty', e.target.value)}
+                              placeholder="0"
+                            />
+                          </td>
+                          <td className="px-4 py-2 text-center">
+                            <input
+                              type="number"
+                              min="0"
+                              className="w-20 border rounded p-1 text-center focus:ring-2 focus:ring-red-500 outline-none"
+                              value={item.missing_qty || ''}
+                              onChange={(e) => handleUpdateInventoryVerification(idx, 'missing_qty', e.target.value)}
+                              placeholder="0"
+                            />
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -3488,7 +3599,7 @@ const Services = () => {
                 {checkoutInventoryDetails.message || "No inventory items found"}
               </div>
             )}
-            
+
             <div className="mb-4">
               <label className="block text-sm font-medium mb-2">Inventory Verification Notes (Optional):</label>
               <textarea
@@ -3498,7 +3609,7 @@ const Services = () => {
                 placeholder="Add any notes about inventory verification..."
               />
             </div>
-            
+
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => {
@@ -3517,6 +3628,49 @@ const Services = () => {
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
               >
                 Complete Verification
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      {paymentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+            <h2 className="text-xl font-bold mb-4">Mark Order as Paid</h2>
+
+            <div className="mb-4">
+              <div className="text-sm text-gray-600 mb-1">Order Amount:</div>
+              <div className="text-2xl font-bold">₹{paymentModal.amount?.toFixed(2)}</div>
+              <div className="text-xs text-gray-500 mt-1">+ 5% GST will be added</div>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2">Payment Method</label>
+              <select
+                className="w-full border rounded p-2"
+                value={paymentModal.paymentMethod}
+                onChange={(e) => setPaymentModal({ ...paymentModal, paymentMethod: e.target.value })}
+              >
+                <option value="cash">Cash</option>
+                <option value="card">Card</option>
+                <option value="upi">UPI</option>
+              </select>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setPaymentModal(null)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePaymentSubmit}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+              >
+                Confirm Payment
               </button>
             </div>
           </div>

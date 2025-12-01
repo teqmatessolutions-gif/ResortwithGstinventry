@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Float, Integer, String, ForeignKey, Date
+from sqlalchemy import Column, Float, Integer, String, ForeignKey, Date, DateTime
 from sqlalchemy.orm import relationship
 from app.database import Base
 from .room import Room
@@ -14,6 +14,7 @@ class Booking(Base):
     guest_email = Column(String, nullable=True)
     check_in = Column(Date, nullable=False)
     check_out = Column(Date, nullable=False)
+    checked_in_at = Column(DateTime, nullable=True)  # Actual check-in timestamp
     adults = Column(Integer, default=2)
     children = Column(Integer, default=0)
     id_card_image_url = Column(String, nullable=True)

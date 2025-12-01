@@ -9,8 +9,8 @@ import { useNavigate } from "react-router-dom";
 import autoTable from 'jspdf-autotable';
 // Make sure to place your logo in the specified path or update the path accordingly.
 import { useInfiniteScroll } from "./useInfiniteScroll";
-import logo from '../assets/logo.jpeg'; 
-import { formatCurrency } from '../utils/currency'; 
+import logo from '../assets/logo.jpeg';
+import { formatCurrency } from '../utils/currency';
 import { getApiBaseUrl } from "../utils/env";
 
 
@@ -93,7 +93,7 @@ const CheckoutDetailModal = React.memo(({ checkout, onClose }) => {
   }, [checkout]);
 
   if (!checkout) return null;
-  
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4 overflow-y-auto">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] p-6 relative animate-fade-in-up overflow-y-auto">
@@ -101,7 +101,7 @@ const CheckoutDetailModal = React.memo(({ checkout, onClose }) => {
           <X size={24} />
         </button>
         <h2 className="text-2xl font-bold text-gray-800 mb-4">Checkout Details (ID: {checkout.id})</h2>
-        
+
         {loading ? (
           <div className="text-center py-8">Loading details...</div>
         ) : details ? (
@@ -300,7 +300,7 @@ const Billing = () => {
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [checkoutRequest, setCheckoutRequest] = useState(null);
   const [checkingInventory, setCheckingInventory] = useState(false);
-  
+
   // Filter and search states
   const [searchQuery, setSearchQuery] = useState("");
   const [guestNameFilter, setGuestNameFilter] = useState("");
@@ -368,7 +368,7 @@ const Billing = () => {
       // General search - search across ID, guest name, room number, booking ID
       if (searchQuery) {
         const searchLower = searchQuery.toLowerCase();
-        const matchesSearch = 
+        const matchesSearch =
           c.id.toString().toLowerCase().includes(searchLower) ||
           c.guest_name?.toLowerCase().includes(searchLower) ||
           c.room_number?.toLowerCase().includes(searchLower) ||
@@ -390,7 +390,7 @@ const Billing = () => {
       // Booking ID filter
       if (bookingIdFilter) {
         const bookingIdStr = bookingIdFilter.toLowerCase();
-        const matchesBookingId = 
+        const matchesBookingId =
           c.booking_id?.toString().toLowerCase().includes(bookingIdStr) ||
           c.package_booking_id?.toString().toLowerCase().includes(bookingIdStr);
         if (!matchesBookingId) return false;
@@ -555,7 +555,7 @@ const Billing = () => {
         setCheckoutRequest(null);
         return;
       }
-      
+
       try {
         const actualRoomNumber = roomNumber.includes('-') ? roomNumber.split('-')[1] : roomNumber;
         const res = await api.get(`/bill/checkout-request/${actualRoomNumber}`);
@@ -569,7 +569,7 @@ const Billing = () => {
         setCheckoutRequest(null);
       }
     };
-    
+
     fetchCheckoutRequest();
   }, [roomNumber]);
 
@@ -578,7 +578,7 @@ const Billing = () => {
       showBannerMessage("error", "Please select a booking to checkout.");
       return;
     }
-    
+
     setLoading(true);
     try {
       const actualRoomNumber = roomNumber.includes('-') ? roomNumber.split('-')[1] : roomNumber;
@@ -604,7 +604,7 @@ const Billing = () => {
       showBannerMessage("error", "No checkout request found.");
       return;
     }
-    
+
     setCheckingInventory(true);
     try {
       const res = await api.post(`/bill/checkout-request/${checkoutRequest.request_id}/check-inventory`);
@@ -630,13 +630,13 @@ const Billing = () => {
       showBannerMessage("error", "Please select a booking to checkout.");
       return;
     }
-    
+
     // Check if checkout request exists and is completed
     if (checkoutRequest && checkoutRequest.exists && checkoutRequest.status !== "completed") {
       showBannerMessage("error", "Please complete the checkout request (verify inventory) before getting the bill.");
       return;
     }
-    
+
     setLoading(true);
     setBillData(null);
     setDiscount(0); // Reset discount when fetching a new bill
@@ -645,7 +645,7 @@ const Billing = () => {
       const actualRoomNumber = roomNumber.includes('-') ? roomNumber.split('-')[1] : roomNumber;
       const res = await api.get(`/bill/${actualRoomNumber}?checkout_mode=${checkoutMode}`);
       if (res.data && res.data.room_numbers) {
-      setBillData(res.data);
+        setBillData(res.data);
         const roomCount = res.data.room_numbers.length;
         const modeText = checkoutMode === "single" ? "single room" : "all rooms in the booking";
         showBannerMessage("success", `Bill retrieved for ${roomCount} room(s) (${modeText}).`);
@@ -672,13 +672,13 @@ const Billing = () => {
       showBannerMessage("error", "No booking selected for checkout.");
       return;
     }
-    
+
     // Check if checkout request exists and is completed
     if (checkoutRequest && checkoutRequest.exists && checkoutRequest.status !== "completed") {
       showBannerMessage("error", "Please complete the checkout request (verify inventory) before completing checkout.");
       return;
     }
-    
+
     // Validate discount amount
     const discountAmount = parseFloat(discount) || 0;
     if (discountAmount < 0) {
@@ -712,11 +712,11 @@ const Billing = () => {
       }, 1000);
     } catch (error) {
       const errorMessage = error.response?.data?.detail || error.message || "Checkout failed";
-      
+
       // If it's a conflict error, it means it's already checked out. Show a clearer message.
       if (error.response?.status === 409) {
-        const conflictMessage = errorMessage.includes("already") 
-          ? errorMessage 
+        const conflictMessage = errorMessage.includes("already")
+          ? errorMessage
           : `This booking or room has already been checked out. ${errorMessage}`;
         showBannerMessage("error", conflictMessage);
         setBillData(null);
@@ -796,10 +796,15 @@ const Billing = () => {
     const totalGST = billData.charges.total_gst || 0;
     const grandTotal = Math.max(0, subtotal + totalGST - (parseFloat(discount) || 0));
     const totals = [
-      ['Subtotal', formatCurrency(subtotal)],
+      ...(billData.charges.food_charges > 0 ? [['Food & Beverage', formatCurrency(billData.charges.food_charges)]] : []),
+      ...(billData.charges.service_charges > 0 ? [['Service Charges', formatCurrency(billData.charges.service_charges)]] : []),
+      ...(billData.charges.consumables_charges > 0 ? [['Consumables', formatCurrency(billData.charges.consumables_charges)]] : []),
+      ['Subtotal', formatCurrency(billData.charges.total_due)],
       ...(billData.charges.room_gst > 0 ? [['Room GST', `+${formatCurrency(billData.charges.room_gst || 0)}`]] : []),
       ...(billData.charges.package_gst > 0 ? [['Package GST', `+${formatCurrency(billData.charges.package_gst || 0)}`]] : []),
       ...(billData.charges.food_gst > 0 ? [['Food GST (5%)', `+${formatCurrency(billData.charges.food_gst || 0)}`]] : []),
+      ...(billData.charges.service_gst > 0 ? [['Service GST', `+${formatCurrency(billData.charges.service_gst || 0)}`]] : []),
+      ...(billData.charges.consumables_gst > 0 ? [['Consumables GST (5%)', `+${formatCurrency(billData.charges.consumables_gst || 0)}`]] : []),
       ['Total GST', `+${formatCurrency(totalGST)}`],
       ...(discount > 0 ? [['Discount', `-${formatCurrency(parseFloat(discount))}`]] : []),
       ['Grand Total', formatCurrency(grandTotal)]
@@ -867,6 +872,12 @@ const Billing = () => {
         text += `- ${item.item_name} (x${item.quantity}): ${formatCurrency(item.amount)}\n`;
       });
     }
+    if (billData.charges.consumables_items && billData.charges.consumables_items.length > 0) {
+      text += `\nConsumables:\n`;
+      billData.charges.consumables_items.forEach(item => {
+        text += `- ${item.item_name} (x${item.actual_consumed}): ${formatCurrency(item.total_charge)}\n`;
+      });
+    }
     if (billData.charges.service_items.length > 0) {
       text += `\nAdditional Services:\n`;
       billData.charges.service_items.forEach(item => {
@@ -886,6 +897,12 @@ const Billing = () => {
     }
     if (billData.charges.food_gst > 0) {
       text += `Food GST (5%): +${formatCurrency(billData.charges.food_gst || 0)}\n`;
+    }
+    if (billData.charges.service_gst > 0) {
+      text += `Service GST: +${formatCurrency(billData.charges.service_gst || 0)}\n`;
+    }
+    if (billData.charges.consumables_gst > 0) {
+      text += `Consumables GST (5%): +${formatCurrency(billData.charges.consumables_gst || 0)}\n`;
     }
     text += `Total GST: +${formatCurrency(billData.charges.total_gst || 0)}\n`;
     if (discount > 0) text += `Discount: -${formatCurrency(parseFloat(discount))}\n`;
@@ -910,8 +927,8 @@ const Billing = () => {
 
   return (
     <DashboardLayout>
-      <BannerMessage 
-        message={bannerMessage} 
+      <BannerMessage
+        message={bannerMessage}
         onClose={closeBannerMessage}
         autoDismiss={true}
         duration={5000}
@@ -935,12 +952,12 @@ const Billing = () => {
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <KpiCard title="Checkouts Today" value={kpiData.checkouts_today} icon={<Hash size={22} className="text-indigo-600"/>} color="bg-indigo-100" />
-          <KpiCard title="Total Checkouts" value={kpiData.checkouts_total} icon={<Hash size={22} className="text-green-600"/>} color="bg-green-100" />
-          <KpiCard title="Available Rooms" value={kpiData.available_rooms} icon={<BedDouble size={22} className="text-blue-600"/>} color="bg-blue-100" />
-          <KpiCard title="Booked Rooms" value={kpiData.booked_rooms} icon={<BedDouble size={22} className="text-red-600"/>} color="bg-red-100" />
-          <KpiCard title="Food Revenue Today" value={kpiData.food_revenue_today.toLocaleString()} prefix="₹" icon={<Utensils size={22} className="text-yellow-600"/>} color="bg-yellow-100" />
-          <KpiCard title="Package Bookings Today" value={kpiData.package_bookings_today} icon={<Package size={22} className="text-purple-600"/>} color="bg-purple-100" />
+          <KpiCard title="Checkouts Today" value={kpiData.checkouts_today} icon={<Hash size={22} className="text-indigo-600" />} color="bg-indigo-100" />
+          <KpiCard title="Total Checkouts" value={kpiData.checkouts_total} icon={<Hash size={22} className="text-green-600" />} color="bg-green-100" />
+          <KpiCard title="Available Rooms" value={kpiData.available_rooms} icon={<BedDouble size={22} className="text-blue-600" />} color="bg-blue-100" />
+          <KpiCard title="Booked Rooms" value={kpiData.booked_rooms} icon={<BedDouble size={22} className="text-red-600" />} color="bg-red-100" />
+          <KpiCard title="Food Revenue Today" value={kpiData.food_revenue_today.toLocaleString()} prefix="₹" icon={<Utensils size={22} className="text-yellow-600" />} color="bg-yellow-100" />
+          <KpiCard title="Package Bookings Today" value={kpiData.package_bookings_today} icon={<Package size={22} className="text-purple-600" />} color="bg-purple-100" />
         </div>
 
         {/* Charts */}
@@ -997,9 +1014,9 @@ const Billing = () => {
                 const parts = value.split('-');
                 if (parts.length >= 3) {
                   const [bookingId, roomNum, mode] = parts;
-                  const selected = activeRooms.find(b => 
-                    b.booking_id.toString() === bookingId && 
-                    b.room_number === roomNum && 
+                  const selected = activeRooms.find(b =>
+                    b.booking_id.toString() === bookingId &&
+                    b.room_number === roomNum &&
                     b.checkout_mode === mode
                   );
                   setRoomNumber(value);
@@ -1026,7 +1043,7 @@ const Billing = () => {
                 return (
                   <option key={`${uniqueValue}-${index}`} value={uniqueValue}>
                     {booking.display_label || `${booking.room_numbers?.join(', ') || booking.room_number} (${booking.guest_name})`}
-                </option>
+                  </option>
                 );
               })}
             </select>
@@ -1034,14 +1051,14 @@ const Billing = () => {
               // Parse composite key to find the correct selection
               let selected = null;
               let actualMode = "multiple";
-              
+
               if (roomNumber.includes('-')) {
                 const parts = roomNumber.split('-');
                 if (parts.length >= 3) {
                   const [bookingId, roomNum, mode] = parts;
-                  selected = activeRooms.find(b => 
-                    b.booking_id.toString() === bookingId && 
-                    b.room_number === roomNum && 
+                  selected = activeRooms.find(b =>
+                    b.booking_id.toString() === bookingId &&
+                    b.room_number === roomNum &&
                     b.checkout_mode === mode
                   );
                   actualMode = selected?.checkout_mode || mode || "multiple";
@@ -1051,7 +1068,7 @@ const Billing = () => {
                 selected = activeRooms.find(b => b.room_number === roomNumber);
                 actualMode = selected?.checkout_mode || "multiple";
               }
-              
+
               const isMultiple = actualMode === "multiple";
               return (
                 <div className={`mt-2 p-3 ${isMultiple ? 'bg-blue-50 border-blue-200' : 'bg-green-50 border-green-200'} border rounded-lg text-sm ${isMultiple ? 'text-blue-800' : 'text-green-800'}`}>
@@ -1066,24 +1083,22 @@ const Billing = () => {
               );
             })()}
           </div>
-          
+
           {/* Checkout Request Status */}
           {checkoutRequest && checkoutRequest.exists && (
-            <div className={`mb-4 p-3 rounded-lg ${
-              checkoutRequest.status === 'completed' ? 'bg-green-50 border border-green-200' : 
+            <div className={`mb-4 p-3 rounded-lg ${checkoutRequest.status === 'completed' ? 'bg-green-50 border border-green-200' :
               checkoutRequest.status === 'in_progress' ? 'bg-blue-50 border border-blue-200' :
-              'bg-yellow-50 border border-yellow-200'
-            }`}>
+                'bg-yellow-50 border border-yellow-200'
+              }`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className={`font-semibold ${
-                    checkoutRequest.status === 'completed' ? 'text-green-800' : 
+                  <p className={`font-semibold ${checkoutRequest.status === 'completed' ? 'text-green-800' :
                     checkoutRequest.status === 'in_progress' ? 'text-blue-800' :
-                    'text-yellow-800'
-                  }`}>
-                    {checkoutRequest.status === 'completed' ? '✓ Checkout Request Completed' : 
-                     checkoutRequest.status === 'in_progress' ? '🔄 Checkout Request In Progress' :
-                     '⚠ Checkout Request Pending'}
+                      'text-yellow-800'
+                    }`}>
+                    {checkoutRequest.status === 'completed' ? '✓ Checkout Request Completed' :
+                      checkoutRequest.status === 'in_progress' ? '🔄 Checkout Request In Progress' :
+                        '⚠ Checkout Request Pending'}
                   </p>
                   {checkoutRequest.employee_name && (
                     <p className="text-xs text-gray-600 mt-1">
@@ -1092,7 +1107,7 @@ const Billing = () => {
                   )}
                   {checkoutRequest.inventory_checked_by && (
                     <p className="text-xs text-gray-600 mt-1">
-                      Verified by: {checkoutRequest.inventory_checked_by} 
+                      Verified by: {checkoutRequest.inventory_checked_by}
                       {checkoutRequest.inventory_checked_at && ` on ${new Date(checkoutRequest.inventory_checked_at).toLocaleString()}`}
                     </p>
                   )}
@@ -1105,7 +1120,7 @@ const Billing = () => {
               </div>
             </div>
           )}
-          
+
           {/* Request Checkout Button */}
           {(!checkoutRequest || !checkoutRequest.exists) && (
             <button
@@ -1116,15 +1131,14 @@ const Billing = () => {
               {loading ? "Creating Request..." : "Request Checkout (Verify Inventory First)"}
             </button>
           )}
-          
+
           {/* Get Bill Button - Only enabled if checkout request is completed or no request exists */}
           <button
             onClick={handleGetBill}
-            className={`w-full py-2.5 rounded-lg font-semibold transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 mb-4 ${
-              (checkoutRequest && checkoutRequest.exists && checkoutRequest.status !== 'completed')
-                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                : 'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500'
-            }`}
+            className={`w-full py-2.5 rounded-lg font-semibold transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 mb-4 ${(checkoutRequest && checkoutRequest.exists && checkoutRequest.status !== 'completed')
+              ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+              : 'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500'
+              }`}
             disabled={loading || (checkoutRequest && checkoutRequest.exists && checkoutRequest.status !== 'completed')}
           >
             {loading ? "Fetching Bill..." : checkoutMode === "single" ? "Get Bill for Single Room" : "Get Bill for Entire Booking"}
@@ -1132,102 +1146,122 @@ const Billing = () => {
 
           {billData && (() => {
             // Calculate food charges - use food_charges if available, otherwise calculate from food_items (only unpaid items)
-            const foodCharges = billData.charges.food_charges || 
-              (billData.charges.food_items && billData.charges.food_items.length > 0 
+            const foodCharges = billData.charges.food_charges ||
+              (billData.charges.food_items && billData.charges.food_items.length > 0
                 ? billData.charges.food_items
-                    .filter(item => !item.is_paid) // Only count unpaid items
-                    .reduce((sum, item) => sum + (item.amount || 0), 0)
+                  .filter(item => !item.is_paid) // Only count unpaid items
+                  .reduce((sum, item) => sum + (item.amount || 0), 0)
                 : 0);
-            
+
             // Check if there are any food items (paid or unpaid)
             const hasFoodItems = billData.charges.food_items && billData.charges.food_items.length > 0;
-            
+
             // Calculate room charge breakdown
             const numRooms = billData.room_numbers?.length || 1;
             const stayNights = billData.stay_nights || 1;
             const totalRoomCharges = billData.charges.room_charges || 0;
-            const dailyRatePerRoom = totalRoomCharges > 0 && stayNights > 0 && numRooms > 0 
-              ? totalRoomCharges / (stayNights * numRooms) 
+            const dailyRatePerRoom = totalRoomCharges > 0 && stayNights > 0 && numRooms > 0
+              ? totalRoomCharges / (stayNights * numRooms)
               : 0;
-            
+
             return (
-            <div id="bill-details" className="bg-gray-50 border border-gray-200 p-4 rounded-xl mb-6 animate-fade-in">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">Detailed Bill</h2>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-4 text-sm">
-                <p><span className="font-semibold">Guest Name:</span> {billData.guest_name}</p>
-                <p><span className="font-semibold">Rooms:</span> {billData.room_numbers.join(', ')} ({billData.room_numbers.length})</p>
-                <p><span className="font-semibold">Check-in:</span> {new Date(billData.check_in).toLocaleDateString()}</p>
-                <p><span className="font-semibold">Check-out:</span> {new Date(billData.check_out).toLocaleDateString()}</p>
-                <p><span className="font-semibold">Stay:</span> {billData.stay_nights} nights</p>
-                <p><span className="font-semibold">Guests:</span> {billData.number_of_guests}</p>
-              </div>
-              
-              <div className="mt-4 pt-4 border-t">
-                <h3 className="font-bold text-gray-700 mb-2">Itemized Charges:</h3>
-                <ul className="list-disc list-inside space-y-1 text-gray-600">
-                  {billData.charges.room_charges > 0 && (
-                    <li>
-                      Room Charges: {formatCurrency(billData.charges.room_charges)}
-                      <span className="text-xs text-gray-500 ml-2">
-                        ({formatCurrency(dailyRatePerRoom)}/day × {stayNights} {stayNights === 1 ? 'night' : 'nights'} × {numRooms} {numRooms === 1 ? 'room' : 'rooms'})
-                      </span>
-                    </li>
-                  )}
-                  {billData.charges.package_charges > 0 && <li>Package Charges: {formatCurrency(billData.charges.package_charges)}</li>}
-                  {hasFoodItems && <li>Food Charges: {formatCurrency(foodCharges)} {foodCharges === 0 && billData.charges.food_items.some(item => item.is_paid) && <span className="text-xs text-gray-500">(All paid)</span>}</li>}
-                </ul>
+              <div id="bill-details" className="bg-gray-50 border border-gray-200 p-4 rounded-xl mb-6 animate-fade-in">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">Detailed Bill</h2>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-4 text-sm">
+                  <p><span className="font-semibold">Guest Name:</span> {billData.guest_name}</p>
+                  <p><span className="font-semibold">Rooms:</span> {billData.room_numbers.join(', ')} ({billData.room_numbers.length})</p>
+                  <p><span className="font-semibold">Check-in:</span> {new Date(billData.check_in).toLocaleDateString()}</p>
+                  <p><span className="font-semibold">Check-out:</span> {new Date(billData.check_out).toLocaleDateString()}</p>
+                  <p><span className="font-semibold">Stay:</span> {billData.stay_nights} nights</p>
+                  <p><span className="font-semibold">Guests:</span> {billData.number_of_guests}</p>
+                </div>
 
-                {billData.charges.food_items.length > 0 && (
-                  <div className="mt-3">
-                    <h4 className="font-semibold text-gray-600">Food & Beverage Details:</h4>
-                    <ul className="list-decimal list-inside ml-4 text-xs text-gray-500">
-                      {billData.charges.food_items.map((item, i) => (
-                        <li key={i} className={item.is_paid ? "text-gray-400 line-through" : ""}>
-                          {item.item_name} (x{item.quantity}) - {formatCurrency(item.amount)}
-                          {item.is_paid && <span className="ml-2 text-green-600 text-xs">(Paid)</span>}
-                        </li>
-                      ))}
-                    </ul>
+                <div className="mt-4 pt-4 border-t">
+                  <h3 className="font-bold text-gray-700 mb-2">Itemized Charges:</h3>
+                  <ul className="list-disc list-inside space-y-1 text-gray-600">
+                    {billData.charges.room_charges > 0 && (
+                      <li>
+                        Room Charges: {formatCurrency(billData.charges.room_charges)}
+                        <span className="text-xs text-gray-500 ml-2">
+                          ({formatCurrency(dailyRatePerRoom)}/day × {stayNights} {stayNights === 1 ? 'night' : 'nights'} × {numRooms} {numRooms === 1 ? 'room' : 'rooms'})
+                        </span>
+                      </li>
+                    )}
+                    {billData.charges.package_charges > 0 && <li>Package Charges: {formatCurrency(billData.charges.package_charges)}</li>}
+                    {hasFoodItems && <li>Food Charges: {formatCurrency(foodCharges)} {foodCharges === 0 && billData.charges.food_items.some(item => item.is_paid) && <span className="text-xs text-gray-500">(All paid)</span>}</li>}
+                    {billData.charges.service_charges > 0 && <li>Service Charges: {formatCurrency(billData.charges.service_charges)}</li>}
+                    {billData.charges.consumables_charges > 0 && <li>Consumables Charges: {formatCurrency(billData.charges.consumables_charges)}</li>}
+                  </ul>
+
+                  {billData.charges.food_items.length > 0 && (
+                    <div className="mt-3">
+                      <h4 className="font-semibold text-gray-600">Food & Beverage Details:</h4>
+                      <ul className="list-decimal list-inside ml-4 text-xs text-gray-500">
+                        {billData.charges.food_items.map((item, i) => (
+                          <li key={i} className={item.is_paid ? "text-gray-400 line-through" : ""}>
+                            {item.item_name} (x{item.quantity}) - {formatCurrency(item.amount)}
+                            {item.is_paid && <span className="ml-2 text-green-600 text-xs">(Paid)</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {billData.charges.consumables_items && billData.charges.consumables_items.length > 0 && (
+                    <div className="mt-3">
+                      <h4 className="font-semibold text-gray-600">Consumables (Payable Items):</h4>
+                      <ul className="list-decimal list-inside ml-4 text-xs text-gray-500">
+                        {billData.charges.consumables_items.map((item, i) => (
+                          <li key={i}>
+                            {item.item_name} (x{item.actual_consumed}) - {formatCurrency(item.total_charge)}
+                            {item.complimentary_limit > 0 && (
+                              <span className="text-xs text-gray-400 ml-1">
+                                (Limit: {item.complimentary_limit} free)
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {billData.charges.service_items.length > 0 && (
+                    <div className="mt-3">
+                      <h4 className="font-semibold text-gray-600">Additional Services:</h4>
+                      <ul className="list-decimal list-inside ml-4 text-xs text-gray-500">
+                        {billData.charges.service_items.map((item, i) => <li key={i}>{item.service_name} - {formatCurrency(item.charges)}</li>)}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="mt-4 pt-4 border-t text-right space-y-1">
+                    <p className="text-sm text-gray-600">Subtotal: {formatCurrency(billData.charges.total_due)}</p>
+                    {/* GST Breakdown */}
+                    {billData.charges.room_gst > 0 && (
+                      <p className="text-xs text-gray-500">Room GST ({
+                        billData.charges.room_charges < 5000 ? '5%' :
+                          billData.charges.room_charges <= 7500 ? '12%' : '18%'
+                      }): +{formatCurrency(billData.charges.room_gst || 0)}</p>
+                    )}
+                    {billData.charges.package_gst > 0 && (
+                      <p className="text-xs text-gray-500">Package GST ({
+                        billData.charges.package_charges < 5000 ? '5%' :
+                          billData.charges.package_charges <= 7500 ? '12%' : '18%'
+                      }): +{formatCurrency(billData.charges.package_gst || 0)}</p>
+                    )}
+                    {billData.charges.food_gst > 0 && (
+                      <p className="text-xs text-gray-500">Food GST (5%): +{formatCurrency(billData.charges.food_gst || 0)}</p>
+                    )}
+                    <p className="text-sm text-gray-600 font-semibold">Total GST: +{formatCurrency(billData.charges.total_gst || 0)}</p>
+                    {discount > 0 && (
+                      <p className="text-sm text-green-600">Discount: -{formatCurrency(parseFloat(discount))}</p>
+                    )}
+                    <p className="font-bold text-xl text-gray-900">
+                      Grand Total: {formatCurrency(Math.max(0, billData.charges.total_due + (billData.charges.total_gst || 0) - discount))}
+                    </p>
                   </div>
-                )}
-
-                {billData.charges.service_items.length > 0 && (
-                  <div className="mt-3">
-                    <h4 className="font-semibold text-gray-600">Additional Services:</h4>
-                    <ul className="list-decimal list-inside ml-4 text-xs text-gray-500">
-                      {billData.charges.service_items.map((item, i) => <li key={i}>{item.service_name} - {formatCurrency(item.charges)}</li>)}
-                    </ul>
-                  </div>
-                )}
-
-                <div className="mt-4 pt-4 border-t text-right space-y-1">
-                  <p className="text-sm text-gray-600">Subtotal: {formatCurrency(billData.charges.total_due)}</p>
-                  {/* GST Breakdown */}
-                  {billData.charges.room_gst > 0 && (
-                    <p className="text-xs text-gray-500">Room GST ({
-                      billData.charges.room_charges < 5000 ? '5%' : 
-                      billData.charges.room_charges <= 7500 ? '12%' : '18%'
-                    }): +{formatCurrency(billData.charges.room_gst || 0)}</p>
-                  )}
-                  {billData.charges.package_gst > 0 && (
-                    <p className="text-xs text-gray-500">Package GST ({
-                      billData.charges.package_charges < 5000 ? '5%' : 
-                      billData.charges.package_charges <= 7500 ? '12%' : '18%'
-                    }): +{formatCurrency(billData.charges.package_gst || 0)}</p>
-                  )}
-                  {billData.charges.food_gst > 0 && (
-                    <p className="text-xs text-gray-500">Food GST (5%): +{formatCurrency(billData.charges.food_gst || 0)}</p>
-                  )}
-                  <p className="text-sm text-gray-600 font-semibold">Total GST: +{formatCurrency(billData.charges.total_gst || 0)}</p>
-                  {discount > 0 && (
-                    <p className="text-sm text-green-600">Discount: -{formatCurrency(parseFloat(discount))}</p>
-                  )}
-                  <p className="font-bold text-xl text-gray-900">
-                    Grand Total: {formatCurrency(Math.max(0, billData.charges.total_due + (billData.charges.total_gst || 0) - discount))}
-                  </p>
                 </div>
               </div>
-            </div>
             );
           })()}
 
@@ -1254,10 +1288,10 @@ const Billing = () => {
               </div>
               <div className="space-y-3">
                 <div className="flex space-x-2">
-                   <button onClick={() => generatePDF('print')} className="flex-1 bg-gray-500 text-white py-2 rounded-lg font-semibold hover:bg-gray-600 transition">Print</button>
-                   <button onClick={() => generatePDF('download')} className="flex-1 bg-indigo-500 text-white py-2 rounded-lg font-semibold hover:bg-indigo-600 transition">Download</button>
-                   <button onClick={handleWhatsAppShare} className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 transition">WhatsApp</button>
-                   <button onClick={handleEmailShare} className="flex-1 bg-blue-500 text-white py-2 rounded-lg font-semibold hover:bg-blue-600 transition">Email</button>
+                  <button onClick={() => generatePDF('print')} className="flex-1 bg-gray-500 text-white py-2 rounded-lg font-semibold hover:bg-gray-600 transition">Print</button>
+                  <button onClick={() => generatePDF('download')} className="flex-1 bg-indigo-500 text-white py-2 rounded-lg font-semibold hover:bg-indigo-600 transition">Download</button>
+                  <button onClick={handleWhatsAppShare} className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 transition">WhatsApp</button>
+                  <button onClick={handleEmailShare} className="flex-1 bg-blue-500 text-white py-2 rounded-lg font-semibold hover:bg-blue-600 transition">Email</button>
                 </div>
                 <button
                   onClick={handleCheckout}
@@ -1295,7 +1329,7 @@ const Billing = () => {
               <Filter size={18} className="text-indigo-600" />
               <h3 className="font-semibold text-gray-800">Filters & Search</h3>
             </div>
-            
+
             {/* General Search */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
@@ -1467,11 +1501,11 @@ const Billing = () => {
               </tbody>
             </table>
           </div>
-            {hasMoreCheckouts && (
-              <div ref={loadMoreRef} className="text-center p-4">
-                {isFetchingMore && <span className="text-indigo-600">Loading more checkouts...</span>}
-              </div>
-            )}
+          {hasMoreCheckouts && (
+            <div ref={loadMoreRef} className="text-center p-4">
+              {isFetchingMore && <span className="text-indigo-600">Loading more checkouts...</span>}
+            </div>
+          )}
         </div>
 
         <CheckoutDetailModal checkout={selectedCheckout} onClose={() => setSelectedCheckout(null)} />

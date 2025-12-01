@@ -54,3 +54,49 @@ def update_order(order_id: int, order_update: FoodOrderUpdate, db: Session = Dep
     if not updated:
         raise HTTPException(status_code=404, detail="Order not found")
     return updated
+
+@router.post("/{order_id}/mark-paid")
+def mark_order_paid(
+    order_id: int,
+    payment_method: str,  # "cash", "card", "upi"
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Mark a food order as paid at delivery time.
+    Calculates GST (5%) and updates payment details.
+    """
+    from app.models.foodorder import FoodOrder
+    from datetime import datetime
+    
+    order = db.query(FoodOrder).filter(FoodOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    if order.billing_status == "paid":
+        raise HTTPException(status_code=400, detail="Order already marked as paid")
+    
+    # Calculate GST (5% for food)
+    base_amount = order.amount or 0
+    gst_amount = base_amount * 0.05
+    total_with_gst = base_amount + gst_amount
+    
+    # Update order with payment details
+    order.billing_status = "paid"
+    order.payment_method = payment_method
+    order.payment_time = datetime.utcnow()
+    order.gst_amount = gst_amount
+    order.total_with_gst = total_with_gst
+    
+    db.commit()
+    db.refresh(order)
+    
+    return {
+        "message": "Order marked as paid successfully",
+        "order_id": order.id,
+        "payment_method": payment_method,
+        "base_amount": base_amount,
+        "gst_amount": gst_amount,
+        "total_with_gst": total_with_gst,
+        "payment_time": order.payment_time
+    }

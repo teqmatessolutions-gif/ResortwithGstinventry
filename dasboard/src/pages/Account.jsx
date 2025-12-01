@@ -1381,7 +1381,24 @@ export default function ReportsDashboard() {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold">Journal Entries</h2>
                   <div className="flex items-center space-x-2">
-
+                    <button
+                      onClick={async () => {
+                        if (!window.confirm('Fix missing journal entries for all recent checkouts (last 7 days)?')) return;
+                        try {
+                          const response = await API.post('/accounts/fix-missing-journal-entries?days=7');
+                          alert(`✅ ${response.data.message}\nFixed: ${response.data.fixed}, Failed: ${response.data.failed}`);
+                          if (response.data.fixed > 0) {
+                            fetchJournalEntries(); // Refresh the list
+                          }
+                        } catch (error) {
+                          alert('Failed to fix journal entries: ' + (error.response?.data?.detail || error.message));
+                        }
+                      }}
+                      className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                      title="Fix missing journal entries for checkouts"
+                    >
+                      🔧 Fix Missing Entries
+                    </button>
                     <button
                       onClick={() => {
                         // Export to CSV

@@ -346,9 +346,12 @@ def get_summary(period: str = "all", db: Session = Depends(get_db)):
     try:
         sample = services_query.limit(1000).all()
         services_count = len(sample) if len(sample) < 1000 else 1000
+        print(f"Dashboard: Services count: {services_count}")
+        
         completed_sample = services_query.filter(AssignedService.status == 'completed').limit(1000).all()
         completed_services_count = len(completed_sample) if len(completed_sample) < 1000 else 1000
-    except:
+    except Exception as e:
+        print(f"Dashboard: Error calculating services: {e}")
         services_count = 0
         completed_services_count = 0
 
@@ -409,11 +412,20 @@ def get_summary(period: str = "all", db: Session = Depends(get_db)):
     purchase_count = 0
     try:
         purchases_query = apply_date_filter(db.query(PurchaseMaster), PurchaseMaster.purchase_date)
+        # Debug print
+        print(f"Dashboard: Calculating purchases. Period: {period}")
+        
         total_purchases = purchases_query.with_entities(func.sum(PurchaseMaster.total_amount)).scalar() or 0
+        print(f"Dashboard: Total purchases sum: {total_purchases}")
+        
         # Estimate purchase count
         sample = purchases_query.limit(1000).all()
         purchase_count = len(sample) if len(sample) < 1000 else 1000
-    except:
+        print(f"Dashboard: Purchase count: {purchase_count}")
+    except Exception as e:
+        import traceback
+        print(f"Dashboard: Error calculating purchases: {e}")
+        print(traceback.format_exc())
         total_purchases = 0
         purchase_count = 0
 

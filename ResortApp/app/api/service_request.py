@@ -35,6 +35,14 @@ def get_service_requests(
     # Convert service requests to dict format
     result = []
     for sr in service_requests:
+        import json
+        refill_data = None
+        if sr.refill_data:
+            try:
+                refill_data = json.loads(sr.refill_data)
+            except:
+                refill_data = None
+        
         result.append({
             "id": sr.id,
             "food_order_id": sr.food_order_id,
@@ -47,7 +55,8 @@ def get_service_requests(
             "completed_at": sr.completed_at.isoformat() if sr.completed_at else None,
             "is_checkout_request": False,
             "room_number": getattr(sr, 'room_number', None),
-            "employee_name": getattr(sr, 'employee_name', None)
+            "employee_name": getattr(sr, 'employee_name', None),
+            "refill_data": refill_data
         })
     
     # Also include checkout requests as service requests

@@ -769,6 +769,9 @@ def check_in_booking(
     booking.guest_photo_url = guest_photo_filename
 
     booking.status = "checked-in"
+    # Set the actual check-in timestamp for strict bill scoping
+    from datetime import datetime
+    booking.checked_in_at = datetime.utcnow()
 
     # Save the ID of the user who performed the check-in
     booking.user_id = current_user.id
