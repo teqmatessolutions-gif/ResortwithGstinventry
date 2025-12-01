@@ -20,7 +20,7 @@ const EmployeeOverview = () => {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
   const [workLogs, setWorkLogs] = useState([]);
   const [leaves, setLeaves] = useState([]);
-  const [timeOffRequests, setTimeOffRequests] = useState([]);
+  const [completedTasks, setCompletedTasks] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -37,15 +37,21 @@ const EmployeeOverview = () => {
       setLoading(true);
       Promise.all([
         api.get(`/attendance/work-logs/${selectedEmployeeId}`).catch(() => ({ data: [] })),
-        api.get(`/employees/leave/${selectedEmployeeId}`).catch(() => ({ data: [] }))
-      ]).then(([workRes, leaveRes]) => {
+        api.get(`/employees/leave/${selectedEmployeeId}`).catch(() => ({ data: [] })),
+        api.get(`/services/assigned?employee_id=${selectedEmployeeId}&status=completed&limit=10`).catch(() => ({ data: [] }))
+      ]).then(([workRes, leaveRes, servicesRes]) => {
         setWorkLogs(workRes.data || []);
         setLeaves(leaveRes.data || []);
-        setTimeOffRequests([
-          { id: 1, type: 'Work From Home', dates: 'Oct 22', status: 'Accepted' },
-          { id: 2, type: 'PTO', dates: 'Oct 21-24', status: 'Accepted' },
-          { id: 3, type: 'Work From Home', dates: 'Oct 17', status: 'Accepted' }
-        ]);
+
+        // Format completed services as tasks
+        const tasks = (servicesRes.data || []).map(service => ({
+          id: service.id,
+          type: service.service_name || service.service?.name || 'Service',
+          location: `Room ${service.room_number || service.room?.number || 'N/A'}`,
+          completedAt: service.completed_at,
+          status: 'Completed'
+        }));
+        setCompletedTasks(tasks);
       }).finally(() => setLoading(false));
     }
   }, [selectedEmployeeId]);
@@ -206,22 +212,24 @@ const EmployeeOverview = () => {
               </div>
             </div>
 
-            {/* Time Off Requests */}
+            {/* Tasks Completed by Employee */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4">Time off requests</h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-4">Tasks Completed by Employee</h3>
               <div className="space-y-4">
-                {timeOffRequests.map((request) => (
-                  <div key={request.id} className="flex items-center justify-between">
+                {completedTasks.length > 0 ? completedTasks.map((task) => (
+                  <div key={task.id} className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                       <div>
-                        <p className="text-xs text-gray-500">{request.dates}</p>
-                        <p className="text-sm font-medium">{request.type}</p>
+                        <p className="text-sm font-medium">{task.type}</p>
+                        <p className="text-xs text-gray-500">{task.location}</p>
                       </div>
                     </div>
-                    <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">{request.status}</span>
+                    <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">{task.status}</span>
                   </div>
-                ))}
+                )) : (
+                  <p className="text-sm text-gray-400 text-center py-4">No completed tasks yet</p>
+                )}
               </div>
             </div>
 
