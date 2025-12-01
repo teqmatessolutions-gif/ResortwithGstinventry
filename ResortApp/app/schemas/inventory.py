@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional, List
 from datetime import datetime, date
 from decimal import Decimal
@@ -528,13 +528,12 @@ class LocationBase(BaseModel):
 
 
 class LocationCreate(LocationBase):
+    @field_validator('parent_location_id', mode='before')
     @classmethod
-    def model_validate(cls, obj):
-        # Convert empty string to None for optional integer fields
-        if isinstance(obj, dict):
-            if obj.get('parent_location_id') == '':
-                obj['parent_location_id'] = None
-        return super().model_validate(obj)
+    def empty_str_to_none(cls, v):
+        if v == '' or v is None:
+            return None
+        return v
 
 
 class LocationUpdate(BaseModel):
