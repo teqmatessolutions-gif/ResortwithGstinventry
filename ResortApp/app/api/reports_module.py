@@ -40,58 +40,61 @@ def get_daily_arrival_report(
     current_user: dict = Depends(get_current_user)
 ):
     """Daily Arrival Report: List of guests checking in today"""
-    if not report_date:
-        report_date = date.today()
-    
-    bookings = db.query(Booking).filter(
-        Booking.check_in == report_date
-    ).options(
-        joinedload(Booking.booking_rooms).joinedload(BookingRoom.room),
-        joinedload(Booking.user)
-    ).offset(skip).limit(limit).all()
-    
-    package_bookings = db.query(PackageBooking).filter(
-        PackageBooking.check_in == report_date
-    ).options(
-        joinedload(PackageBooking.package_booking_rooms).joinedload(PackageBookingRoom.room),
-        joinedload(PackageBooking.user),
-        joinedload(PackageBooking.package)
-    ).offset(skip).limit(limit).all()
-    
-    result = []
-    for booking in bookings:
-        for br in booking.booking_rooms:
-            result.append({
-                "guest_name": booking.guest_name,
-                "guest_mobile": booking.guest_mobile,
-                "guest_email": booking.guest_email,
-                "room_number": br.room.number if br.room else "N/A",
-                "room_type": br.room.type if br.room else "N/A",
-                "adults": booking.adults,
-                "children": booking.children,
-                "advance_paid": booking.advance_deposit,
-                "total_amount": booking.total_amount,
-                "special_requests": booking.guest_email,  # Can be enhanced with a notes field
-                "booking_type": "Regular"
-            })
-    
-    for pkg_booking in package_bookings:
-        for pbr in pkg_booking.package_booking_rooms:
-            result.append({
-                "guest_name": pkg_booking.guest_name,
-                "guest_mobile": pkg_booking.guest_mobile,
-                "guest_email": pkg_booking.guest_email,
-                "room_number": pbr.room.number if pbr.room else "N/A",
-                "room_type": pbr.room.type if pbr.room else "N/A",
-                "adults": pkg_booking.adults,
-                "children": pkg_booking.children,
-                "advance_paid": pkg_booking.advance_deposit,
-                "total_amount": pkg_booking.total_amount,
-                "special_requests": f"Package: {pkg_booking.package.name if pkg_booking.package else 'N/A'}",
-                "booking_type": "Package"
-            })
-    
-    return {"date": report_date.isoformat(), "arrivals": result, "total": len(result)}
+    try:
+        if not report_date:
+            report_date = date.today()
+        
+        bookings = db.query(Booking).filter(
+            Booking.check_in == report_date
+        ).options(
+            joinedload(Booking.booking_rooms).joinedload(BookingRoom.room),
+            joinedload(Booking.user)
+        ).offset(skip).limit(limit).all()
+        
+        package_bookings = db.query(PackageBooking).filter(
+            PackageBooking.check_in == report_date
+        ).options(
+            joinedload(PackageBooking.package_booking_rooms).joinedload(PackageBookingRoom.room),
+            joinedload(PackageBooking.user),
+            joinedload(PackageBooking.package)
+        ).offset(skip).limit(limit).all()
+        
+        result = []
+        for booking in bookings:
+            for br in booking.booking_rooms:
+                result.append({
+                    "guest_name": booking.guest_name,
+                    "guest_mobile": booking.guest_mobile,
+                    "guest_email": booking.guest_email,
+                    "room_number": br.room.number if br.room else "N/A",
+                    "room_type": br.room.type if br.room else "N/A",
+                    "adults": booking.adults,
+                    "children": booking.children,
+                    "advance_paid": booking.advance_deposit,
+                    "total_amount": booking.total_amount,
+                    "special_requests": booking.guest_email,  # Can be enhanced with a notes field
+                    "booking_type": "Regular"
+                })
+        
+        for pkg_booking in package_bookings:
+            for pbr in pkg_booking.package_booking_rooms:
+                result.append({
+                    "guest_name": pkg_booking.guest_name,
+                    "guest_mobile": pkg_booking.guest_mobile,
+                    "guest_email": pkg_booking.guest_email,
+                    "room_number": pbr.room.number if pbr.room else "N/A",
+                    "room_type": pbr.room.type if pbr.room else "N/A",
+                    "adults": pkg_booking.adults,
+                    "children": pkg_booking.children,
+                    "advance_paid": pkg_booking.advance_deposit,
+                    "total_amount": pkg_booking.total_amount,
+                    "special_requests": f"Package: {pkg_booking.package.name if pkg_booking.package else 'N/A'}",
+                    "booking_type": "Package"
+                })
+        
+        return {"date": report_date.isoformat(), "arrivals": result, "total": len(result)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching daily arrival report: {str(e)}")
 
 
 @router.get("/front-office/daily-departure")
@@ -326,57 +329,60 @@ def get_in_house_guest_list(
     current_user: dict = Depends(get_current_user)
 ):
     """In-House Guest List: Currently checked-in guests (Emergency evacuation list)"""
-    today = date.today()
-    
-    bookings = db.query(Booking).filter(
-        and_(
-            Booking.check_in <= today,
-            Booking.check_out > today,
-            Booking.status == "checked-in"
-        )
-    ).options(
-        joinedload(Booking.booking_rooms).joinedload(BookingRoom.room)
-    ).offset(skip).limit(limit).all()
-    
-    package_bookings = db.query(PackageBooking).filter(
-        and_(
-            PackageBooking.check_in <= today,
-            PackageBooking.check_out > today,
-            PackageBooking.status == "checked-in"
-        )
-    ).options(
-        joinedload(PackageBooking.package_booking_rooms).joinedload(PackageBookingRoom.room),
-        joinedload(PackageBooking.package)
-    ).offset(skip).limit(limit).all()
-    
-    result = []
-    for booking in bookings:
-        for br in booking.booking_rooms:
-            result.append({
-                "guest_name": booking.guest_name,
-                "guest_mobile": booking.guest_mobile,
-                "room_number": br.room.number if br.room else "N/A",
-                "check_in": booking.check_in.isoformat(),
-                "check_out": booking.check_out.isoformat(),
-                "adults": booking.adults,
-                "children": booking.children,
-                "booking_type": "Regular"
-            })
-    
-    for pkg_booking in package_bookings:
-        for pbr in pkg_booking.package_booking_rooms:
-            result.append({
-                "guest_name": pkg_booking.guest_name,
-                "guest_mobile": pkg_booking.guest_mobile,
-                "room_number": pbr.room.number if pbr.room else "N/A",
-                "check_in": pkg_booking.check_in.isoformat(),
-                "check_out": pkg_booking.check_out.isoformat(),
-                "adults": pkg_booking.adults,
-                "children": pkg_booking.children,
-                "booking_type": "Package"
-            })
-    
-    return {"in_house_guests": result, "total": len(result)}
+    try:
+        today = date.today()
+        
+        bookings = db.query(Booking).filter(
+            and_(
+                Booking.check_in <= today,
+                Booking.check_out > today,
+                Booking.status == "checked-in"
+            )
+        ).options(
+            joinedload(Booking.booking_rooms).joinedload(BookingRoom.room)
+        ).offset(skip).limit(limit).all()
+        
+        package_bookings = db.query(PackageBooking).filter(
+            and_(
+                PackageBooking.check_in <= today,
+                PackageBooking.check_out > today,
+                PackageBooking.status == "checked-in"
+            )
+        ).options(
+            joinedload(PackageBooking.package_booking_rooms).joinedload(PackageBookingRoom.room),
+            joinedload(PackageBooking.package)
+        ).offset(skip).limit(limit).all()
+        
+        result = []
+        for booking in bookings:
+            for br in booking.booking_rooms:
+                result.append({
+                    "guest_name": booking.guest_name,
+                    "guest_mobile": booking.guest_mobile,
+                    "room_number": br.room.number if br.room else "N/A",
+                    "check_in": booking.check_in.isoformat(),
+                    "check_out": booking.check_out.isoformat(),
+                    "adults": booking.adults,
+                    "children": booking.children,
+                    "booking_type": "Regular"
+                })
+        
+        for pkg_booking in package_bookings:
+            for pbr in pkg_booking.package_booking_rooms:
+                result.append({
+                    "guest_name": pkg_booking.guest_name,
+                    "guest_mobile": pkg_booking.guest_mobile,
+                    "room_number": pbr.room.number if pbr.room else "N/A",
+                    "check_in": pkg_booking.check_in.isoformat(),
+                    "check_out": pkg_booking.check_out.isoformat(),
+                    "adults": pkg_booking.adults,
+                    "children": pkg_booking.children,
+                    "booking_type": "Package"
+                })
+        
+        return {"in_house_guests": result, "total": len(result)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching in-house guests: {str(e)}")
 
 
 # ============================================
