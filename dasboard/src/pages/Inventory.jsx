@@ -287,7 +287,7 @@ const LocationStockDetailsModal = ({ locationData, onClose }) => {
 
               {/* Services Used */}
               {locationData.room_usage.services_used &&
-              locationData.room_usage.services_used.length > 0 ? (
+                locationData.room_usage.services_used.length > 0 ? (
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-gray-600">
@@ -338,13 +338,12 @@ const LocationStockDetailsModal = ({ locationData, onClose }) => {
                               </td>
                               <td className="px-2 py-1">
                                 <span
-                                  className={`px-2 py-0.5 text-xs rounded-full ${
-                                    service.status === "completed"
-                                      ? "bg-green-100 text-green-800"
-                                      : service.status === "in_progress"
-                                        ? "bg-yellow-100 text-yellow-800"
-                                        : "bg-gray-100 text-gray-800"
-                                  }`}
+                                  className={`px-2 py-0.5 text-xs rounded-full ${service.status === "completed"
+                                    ? "bg-green-100 text-green-800"
+                                    : service.status === "in_progress"
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : "bg-gray-100 text-gray-800"
+                                    }`}
                                 >
                                   {service.status}
                                 </span>
@@ -438,11 +437,10 @@ const LocationStockDetailsModal = ({ locationData, onClose }) => {
                         </td>
                         <td className="px-3 py-2">
                           <span
-                            className={`px-2 py-1 text-xs rounded-full ${
-                              item.type === "asset"
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-green-100 text-green-800"
-                            }`}
+                            className={`px-2 py-1 text-xs rounded-full ${item.type === "asset"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-green-100 text-green-800"
+                              }`}
                           >
                             {item.type === "asset" ? "Asset" : "Consumable"}
                           </span>
@@ -927,7 +925,7 @@ const Inventory = () => {
       console.error("Error submitting item:", error);
       alert(
         "Failed to submit item: " +
-          (error.response?.data?.detail || error.message),
+        (error.response?.data?.detail || error.message),
       );
     }
   };
@@ -1255,14 +1253,14 @@ const Inventory = () => {
         newDetails.length > 0
           ? newDetails
           : [
-              {
-                item_id: "",
-                requested_quantity: 0,
-                approved_quantity: null,
-                unit: "pcs",
-                notes: "",
-              },
-            ],
+            {
+              item_id: "",
+              requested_quantity: 0,
+              approved_quantity: null,
+              unit: "pcs",
+              notes: "",
+            },
+          ],
     });
   };
 
@@ -1316,7 +1314,7 @@ const Inventory = () => {
       console.error("Error creating requisition:", error);
       alert(
         "Failed to create requisition: " +
-          (error.response?.data?.detail || error.message),
+        (error.response?.data?.detail || error.message),
       );
     }
   };
@@ -1365,15 +1363,15 @@ const Inventory = () => {
         newDetails.length > 0
           ? newDetails
           : [
-              {
-                item_id: "",
-                issued_quantity: 0,
-                unit: "pcs",
-                batch_lot_number: "",
-                cost: 0,
-                notes: "",
-              },
-            ],
+            {
+              item_id: "",
+              issued_quantity: 0,
+              unit: "pcs",
+              batch_lot_number: "",
+              cost: 0,
+              notes: "",
+            },
+          ],
     });
   };
 
@@ -1434,7 +1432,7 @@ const Inventory = () => {
       console.error("Error creating issue:", error);
       alert(
         "Failed to create issue: " +
-          (error.response?.data?.detail || error.message),
+        (error.response?.data?.detail || error.message),
       );
     }
   };
@@ -1502,7 +1500,7 @@ const Inventory = () => {
       console.error("Error approving requisition:", error);
       alert(
         "Failed to approve requisition: " +
-          (error.response?.data?.detail || error.message),
+        (error.response?.data?.detail || error.message),
       );
     }
   };
@@ -1567,7 +1565,7 @@ const Inventory = () => {
       console.error("Error creating waste log:", error);
       alert(
         "Failed to create waste log: " +
-          (error.response?.data?.detail || error.message),
+        (error.response?.data?.detail || error.message),
       );
     }
   };
@@ -1607,7 +1605,7 @@ const Inventory = () => {
       console.error("Error creating location:", error);
       alert(
         "Failed to create location: " +
-          (error.response?.data?.detail || error.message),
+        (error.response?.data?.detail || error.message),
       );
     }
   };
@@ -1642,7 +1640,7 @@ const Inventory = () => {
       console.error("Error creating asset mapping:", error);
       alert(
         "Failed to assign asset: " +
-          (error.response?.data?.detail || error.message),
+        (error.response?.data?.detail || error.message),
       );
     }
   };
@@ -1658,7 +1656,7 @@ const Inventory = () => {
       console.error("Error unassigning asset:", error);
       alert(
         "Failed to unassign asset: " +
-          (error.response?.data?.detail || error.message),
+        (error.response?.data?.detail || error.message),
       );
     }
   };
@@ -1855,11 +1853,10 @@ const Inventory = () => {
                   setActiveTab(tab);
                   setSearchTerm("");
                 }}
-                className={`px-6 py-3 font-medium capitalize transition-colors ${
-                  activeTab === tab
-                    ? "text-indigo-600 border-b-2 border-indigo-600"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
+                className={`px-6 py-3 font-medium capitalize transition-colors ${activeTab === tab
+                  ? "text-indigo-600 border-b-2 border-indigo-600"
+                  : "text-gray-600 hover:text-gray-900"
+                  }`}
               >
                 {tab === "location-stock"
                   ? "Location Stock"
@@ -2057,13 +2054,12 @@ const Inventory = () => {
                                 {req.requisition_number}
                               </h3>
                               <span
-                                className={`px-2 py-1 text-xs rounded-full ${
-                                  req.status === "approved"
-                                    ? "bg-green-100 text-green-800"
-                                    : req.status === "rejected"
-                                      ? "bg-red-100 text-red-800"
-                                      : "bg-yellow-100 text-yellow-800"
-                                }`}
+                                className={`px-2 py-1 text-xs rounded-full ${req.status === "approved"
+                                  ? "bg-green-100 text-green-800"
+                                  : req.status === "rejected"
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-yellow-100 text-yellow-800"
+                                  }`}
                               >
                                 {req.status}
                               </span>
@@ -2076,13 +2072,12 @@ const Inventory = () => {
                               <p>
                                 <span className="font-medium">Priority:</span>
                                 <span
-                                  className={`ml-1 px-2 py-0.5 text-xs rounded-full ${
-                                    req.priority === "urgent"
-                                      ? "bg-red-100 text-red-800"
-                                      : req.priority === "critical"
-                                        ? "bg-purple-100 text-purple-800"
-                                        : "bg-blue-100 text-blue-800"
-                                  }`}
+                                  className={`ml-1 px-2 py-0.5 text-xs rounded-full ${req.priority === "urgent"
+                                    ? "bg-red-100 text-red-800"
+                                    : req.priority === "critical"
+                                      ? "bg-purple-100 text-purple-800"
+                                      : "bg-blue-100 text-blue-800"
+                                    }`}
                                 >
                                   {req.priority}
                                 </span>
@@ -2177,26 +2172,24 @@ const Inventory = () => {
                                 </td>
                                 <td className="px-2 sm:px-4 py-3">
                                   <span
-                                    className={`px-2 py-1 text-xs rounded-full ${
-                                      req.priority === "urgent"
-                                        ? "bg-red-100 text-red-800"
-                                        : req.priority === "critical"
-                                          ? "bg-purple-100 text-purple-800"
-                                          : "bg-blue-100 text-blue-800"
-                                    }`}
+                                    className={`px-2 py-1 text-xs rounded-full ${req.priority === "urgent"
+                                      ? "bg-red-100 text-red-800"
+                                      : req.priority === "critical"
+                                        ? "bg-purple-100 text-purple-800"
+                                        : "bg-blue-100 text-blue-800"
+                                      }`}
                                   >
                                     {req.priority}
                                   </span>
                                 </td>
                                 <td className="px-2 sm:px-4 py-3">
                                   <span
-                                    className={`px-2 py-1 text-xs rounded-full ${
-                                      req.status === "approved"
-                                        ? "bg-green-100 text-green-800"
-                                        : req.status === "rejected"
-                                          ? "bg-red-100 text-red-800"
-                                          : "bg-yellow-100 text-yellow-800"
-                                    }`}
+                                    className={`px-2 py-1 text-xs rounded-full ${req.status === "approved"
+                                      ? "bg-green-100 text-green-800"
+                                      : req.status === "rejected"
+                                        ? "bg-red-100 text-red-800"
+                                        : "bg-yellow-100 text-yellow-800"
+                                      }`}
                                   >
                                     {req.status}
                                   </span>
@@ -2749,7 +2742,7 @@ const Inventory = () => {
                         console.error("Error fetching location items:", error);
                         alert(
                           "Failed to load location items: " +
-                            (error.response?.data?.detail || error.message),
+                          (error.response?.data?.detail || error.message),
                         );
                       }
                     }}
@@ -2875,8 +2868,8 @@ const Inventory = () => {
                                           } catch (error) {
                                             alert(
                                               "Failed to delete recipe: " +
-                                                (error.response?.data?.detail ||
-                                                  error.message),
+                                              (error.response?.data?.detail ||
+                                                error.message),
                                             );
                                           }
                                         }
@@ -3480,7 +3473,7 @@ const Inventory = () => {
             } catch (error) {
               alert(
                 "Failed to save recipe: " +
-                  (error.response?.data?.detail || error.message),
+                (error.response?.data?.detail || error.message),
               );
             }
           }}
@@ -3803,28 +3796,26 @@ const PurchasesTable = ({ purchases, onPurchaseClick }) => {
                 </td>
                 <td className="px-4 py-3 text-sm">
                   <span
-                    className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                      purchase.status === "received"
-                        ? "bg-green-100 text-green-800"
-                        : purchase.status === "confirmed"
-                          ? "bg-blue-100 text-blue-800"
-                          : purchase.status === "cancelled"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-gray-100 text-gray-800"
-                    }`}
+                    className={`px-2 py-1 text-xs font-semibold rounded-full ${purchase.status === "received"
+                      ? "bg-green-100 text-green-800"
+                      : purchase.status === "confirmed"
+                        ? "bg-blue-100 text-blue-800"
+                        : purchase.status === "cancelled"
+                          ? "bg-red-100 text-red-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
                   >
                     {purchase.status}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-sm">
                   <span
-                    className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                      purchase.payment_status === "paid"
-                        ? "bg-green-100 text-green-800"
-                        : purchase.payment_status === "partial"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-gray-100 text-gray-800"
-                    }`}
+                    className={`px-2 py-1 text-xs font-semibold rounded-full ${purchase.payment_status === "paid"
+                      ? "bg-green-100 text-green-800"
+                      : purchase.payment_status === "partial"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-gray-100 text-gray-800"
+                      }`}
                   >
                     {purchase.payment_status}
                   </span>
@@ -3887,7 +3878,7 @@ const SmartTransactionsTab = ({
       return (
         sum +
         (parseFloat(item.current_stock) || 0) *
-          (parseFloat(item.unit_price) || 0)
+        (parseFloat(item.unit_price) || 0)
       );
     }, 0);
 
@@ -4151,11 +4142,10 @@ const SmartTransactionsTab = ({
                 <button
                   key={option.value}
                   onClick={() => setFilters({ ...filters, type: option.value })}
-                  className={`px-3 py-2 text-sm font-medium rounded-lg flex items-center gap-2 ${
-                    filters.type === option.value
-                      ? "bg-indigo-600 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
+                  className={`px-3 py-2 text-sm font-medium rounded-lg flex items-center gap-2 ${filters.type === option.value
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
                 >
                   {option.icon}
                   {option.label}
@@ -4404,10 +4394,37 @@ const ItemFormModal = ({
   categories,
   vendors,
   units,
+  locations = [], // Add locations prop with default empty array
   setShowUnitForm,
   onSubmit,
   onClose,
 }) => {
+  // Fetch locations if not provided
+  const [fetchedLocations, setFetchedLocations] = useState([]);
+
+  useEffect(() => {
+    // Only fetch if locations prop is empty
+    console.log('[ItemFormModal] Locations prop:', locations);
+    if (locations.length === 0) {
+      const fetchLocations = async () => {
+        try {
+          console.log('[ItemFormModal] Fetching locations from API...');
+          const response = await API.get('/inventory/locations');
+          console.log('[ItemFormModal] Locations API response:', response.data);
+          setFetchedLocations(response.data || []);
+        } catch (error) {
+          console.error('[ItemFormModal] Error fetching locations:', error);
+          setFetchedLocations([]);
+        }
+      };
+      fetchLocations();
+    }
+  }, [locations]);
+
+  // Use provided locations or fetched locations
+  const availableLocations = locations.length > 0 ? locations : fetchedLocations;
+  console.log('[ItemFormModal] Available locations:', availableLocations);
+
   // Get selected category name for conditional logic
   const selectedCategory = categories.find(
     (cat) => cat.id === parseInt(form.category_id),
@@ -4426,18 +4443,20 @@ const ItemFormModal = ({
   const isConsumable =
     categoryName.includes("consumable") || categoryName.includes("guest");
 
-  // Storage location options
-  const storageLocations = [
-    "Cold Storage",
-    "Dry Store",
-    "Housekeeping Closet",
-    "Server Room",
-    "Warehouse A",
-    "Warehouse B",
-    "Main Store",
-    "Kitchen Store",
-    "Office Store",
-  ];
+  // Storage location options - use API locations if available, otherwise fallback to hardcoded
+  const storageLocations = availableLocations.length > 0
+    ? availableLocations.map(loc => loc.name || `${loc.building} - ${loc.room_area}`)
+    : [
+      "Cold Storage",
+      "Dry Store",
+      "Housekeeping Closet",
+      "Server Room",
+      "Warehouse A",
+      "Warehouse B",
+      "Main Store",
+      "Kitchen Store",
+      "Office Store",
+    ];
 
   // Sub-category options based on main category
   const getSubCategories = () => {
@@ -5587,11 +5606,10 @@ const VendorFormModal = ({ form, setForm, onSubmit, onClose }) => {
                     onChange={(e) => handleGstinChange(e.target.value)}
                     placeholder="15 characters: 29ABCDE1234F1Z5"
                     maxLength={15}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                      form.gst_number && !validateGstin(form.gst_number)
-                        ? "border-red-300"
-                        : "border-gray-300"
-                    }`}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${form.gst_number && !validateGstin(form.gst_number)
+                      ? "border-red-300"
+                      : "border-gray-300"
+                      }`}
                     required
                   />
                   {form.gst_number && !validateGstin(form.gst_number) && (
@@ -6074,14 +6092,13 @@ const VendorFormModal = ({ form, setForm, onSubmit, onClose }) => {
                         })
                       }
                       placeholder="Should match Legal Name on GST"
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                        form.account_holder_name &&
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${form.account_holder_name &&
                         form.legal_name &&
                         form.account_holder_name.toLowerCase() !==
-                          form.legal_name.toLowerCase()
-                          ? "border-yellow-300 bg-yellow-50"
-                          : "border-gray-300"
-                      }`}
+                        form.legal_name.toLowerCase()
+                        ? "border-yellow-300 bg-yellow-50"
+                        : "border-gray-300"
+                        }`}
                       required={
                         form.preferred_payment_method === "Bank Transfer"
                       }
@@ -6089,7 +6106,7 @@ const VendorFormModal = ({ form, setForm, onSubmit, onClose }) => {
                     {form.account_holder_name &&
                       form.legal_name &&
                       form.account_holder_name.toLowerCase() !==
-                        form.legal_name.toLowerCase() && (
+                      form.legal_name.toLowerCase() && (
                         <p className="text-xs text-yellow-600 mt-1">
                           ⚠️ Name mismatch! Account holder should match Legal
                           Name to prevent fraud.
@@ -6131,13 +6148,12 @@ const VendorFormModal = ({ form, setForm, onSubmit, onClose }) => {
                       }
                       placeholder="9-18 digits"
                       maxLength={18}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                        form.account_number &&
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${form.account_number &&
                         form.account_number_confirm &&
                         form.account_number !== form.account_number_confirm
-                          ? "border-red-300"
-                          : "border-gray-300"
-                      }`}
+                        ? "border-red-300"
+                        : "border-gray-300"
+                        }`}
                       required={
                         form.preferred_payment_method === "Bank Transfer"
                       }
@@ -6169,13 +6185,12 @@ const VendorFormModal = ({ form, setForm, onSubmit, onClose }) => {
                       }
                       placeholder="Re-enter account number"
                       maxLength={18}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                        form.account_number &&
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${form.account_number &&
                         form.account_number_confirm &&
                         form.account_number !== form.account_number_confirm
-                          ? "border-red-300"
-                          : "border-gray-300"
-                      }`}
+                        ? "border-red-300"
+                        : "border-gray-300"
+                        }`}
                       required={
                         form.preferred_payment_method === "Bank Transfer"
                       }
@@ -6218,11 +6233,10 @@ const VendorFormModal = ({ form, setForm, onSubmit, onClose }) => {
                       }}
                       placeholder="11 characters: HDFC0001234"
                       maxLength={11}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                        form.ifsc_code && form.ifsc_code.length !== 11
-                          ? "border-yellow-300"
-                          : "border-gray-300"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${form.ifsc_code && form.ifsc_code.length !== 11
+                        ? "border-yellow-300"
+                        : "border-gray-300"
+                        }`}
                       required={
                         form.preferred_payment_method === "Bank Transfer"
                       }
@@ -7111,15 +7125,14 @@ const PurchaseDetailsModal = ({ purchase, onClose, onUpdate }) => {
               >
                 <span>Status:</span>
                 <span
-                  className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                    currentStatus === "received"
-                      ? "bg-green-100 text-green-800"
-                      : currentStatus === "confirmed"
-                        ? "bg-blue-100 text-blue-800"
-                        : currentStatus === "cancelled"
-                          ? "bg-red-100 text-red-800"
-                          : "bg-gray-100 text-gray-800"
-                  }`}
+                  className={`px-2 py-1 text-xs font-semibold rounded-full ${currentStatus === "received"
+                    ? "bg-green-100 text-green-800"
+                    : currentStatus === "confirmed"
+                      ? "bg-blue-100 text-blue-800"
+                      : currentStatus === "cancelled"
+                        ? "bg-red-100 text-red-800"
+                        : "bg-gray-100 text-gray-800"
+                    }`}
                 >
                   {statusOptions.find((s) => s.value === currentStatus)
                     ?.label || currentStatus}
@@ -7135,9 +7148,8 @@ const PurchaseDetailsModal = ({ purchase, onClose, onUpdate }) => {
                       disabled={
                         updatingStatus || option.value === currentStatus
                       }
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed ${
-                        option.value === currentStatus ? "bg-indigo-50" : ""
-                      }`}
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed ${option.value === currentStatus ? "bg-indigo-50" : ""
+                        }`}
                     >
                       <span
                         className={`px-2 py-1 text-xs font-semibold rounded-full ${option.color}`}
@@ -7177,7 +7189,7 @@ const PurchaseDetailsModal = ({ purchase, onClose, onUpdate }) => {
                       text: `Purchase Order ${purchase.purchase_number} - ${purchase.vendor_name}`,
                       url: window.location.href,
                     })
-                    .catch(() => {});
+                    .catch(() => { });
                 } else {
                   // Fallback: copy to clipboard
                   navigator.clipboard.writeText(
@@ -7225,15 +7237,14 @@ const PurchaseDetailsModal = ({ purchase, onClose, onUpdate }) => {
               </label>
               <p className="mt-1">
                 <span
-                  className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                    currentStatus === "received"
-                      ? "bg-green-100 text-green-800"
-                      : currentStatus === "confirmed"
-                        ? "bg-blue-100 text-blue-800"
-                        : currentStatus === "cancelled"
-                          ? "bg-red-100 text-red-800"
-                          : "bg-gray-100 text-gray-800"
-                  }`}
+                  className={`px-2 py-1 text-xs font-semibold rounded-full ${currentStatus === "received"
+                    ? "bg-green-100 text-green-800"
+                    : currentStatus === "confirmed"
+                      ? "bg-blue-100 text-blue-800"
+                      : currentStatus === "cancelled"
+                        ? "bg-red-100 text-red-800"
+                        : "bg-gray-100 text-gray-800"
+                    }`}
                 >
                   {statusOptions.find((s) => s.value === currentStatus)
                     ?.label || currentStatus}
@@ -7246,13 +7257,12 @@ const PurchaseDetailsModal = ({ purchase, onClose, onUpdate }) => {
               </label>
               <p className="mt-1">
                 <span
-                  className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                    purchase.payment_status === "paid"
-                      ? "bg-green-100 text-green-800"
-                      : purchase.payment_status === "partial"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-gray-100 text-gray-800"
-                  }`}
+                  className={`px-2 py-1 text-xs font-semibold rounded-full ${purchase.payment_status === "paid"
+                    ? "bg-green-100 text-green-800"
+                    : purchase.payment_status === "partial"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-gray-100 text-gray-800"
+                    }`}
                 >
                   {purchase.payment_status}
                 </span>
@@ -7620,11 +7630,11 @@ const IssueFormModal = ({
               {requisitions.filter(
                 (r) => r.status === "pending" || r.status === "approved",
               ).length === 0 && (
-                <p className="mt-1 text-xs text-gray-500">
-                  No pending requisitions. Create one in the "Requisitions" tab
-                  first.
-                </p>
-              )}
+                  <p className="mt-1 text-xs text-gray-500">
+                    No pending requisitions. Create one in the "Requisitions" tab
+                    first.
+                  </p>
+                )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -7652,11 +7662,11 @@ const IssueFormModal = ({
               </select>
               {locations.filter((loc) => loc.is_inventory_point).length ===
                 0 && (
-                <p className="mt-1 text-xs text-red-600">
-                  ⚠️ No inventory points found! Create a warehouse location with
-                  "Is Inventory Point" = Yes in the Locations tab.
-                </p>
-              )}
+                  <p className="mt-1 text-xs text-red-600">
+                    ⚠️ No inventory points found! Create a warehouse location with
+                    "Is Inventory Point" = Yes in the Locations tab.
+                  </p>
+                )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -8749,13 +8759,12 @@ const RequisitionDetailsModal = ({ requisition, items, onClose }) => {
               </label>
               <p className="mt-1">
                 <span
-                  className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                    requisition.status === "approved"
-                      ? "bg-green-100 text-green-800"
-                      : requisition.status === "rejected"
-                        ? "bg-red-100 text-red-800"
-                        : "bg-yellow-100 text-yellow-800"
-                  }`}
+                  className={`px-2 py-1 text-xs font-semibold rounded-full ${requisition.status === "approved"
+                    ? "bg-green-100 text-green-800"
+                    : requisition.status === "rejected"
+                      ? "bg-red-100 text-red-800"
+                      : "bg-yellow-100 text-yellow-800"
+                    }`}
                 >
                   {requisition.status}
                 </span>
@@ -8767,13 +8776,12 @@ const RequisitionDetailsModal = ({ requisition, items, onClose }) => {
               </label>
               <p className="mt-1">
                 <span
-                  className={`px-2 py-1 text-xs rounded-full ${
-                    requisition.priority === "urgent"
-                      ? "bg-red-100 text-red-800"
-                      : requisition.priority === "critical"
-                        ? "bg-purple-100 text-purple-800"
-                        : "bg-blue-100 text-blue-800"
-                  }`}
+                  className={`px-2 py-1 text-xs rounded-full ${requisition.priority === "urgent"
+                    ? "bg-red-100 text-red-800"
+                    : requisition.priority === "critical"
+                      ? "bg-purple-100 text-purple-800"
+                      : "bg-blue-100 text-blue-800"
+                    }`}
                 >
                   {requisition.priority}
                 </span>
@@ -9362,15 +9370,14 @@ const AssetDetailsModal = ({ asset, items, locations, onClose }) => {
               </label>
               <p className="mt-1">
                 <span
-                  className={`px-2 py-1 text-xs rounded-full ${
-                    asset.status === "Active"
-                      ? "bg-green-100 text-green-800"
-                      : asset.status === "In Repair"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : asset.status === "Damaged"
-                          ? "bg-red-100 text-red-800"
-                          : "bg-gray-100 text-gray-800"
-                  }`}
+                  className={`px-2 py-1 text-xs rounded-full ${asset.status === "Active"
+                    ? "bg-green-100 text-green-800"
+                    : asset.status === "In Repair"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : asset.status === "Damaged"
+                        ? "bg-red-100 text-red-800"
+                        : "bg-gray-100 text-gray-800"
+                    }`}
                 >
                   {asset.status}
                 </span>
