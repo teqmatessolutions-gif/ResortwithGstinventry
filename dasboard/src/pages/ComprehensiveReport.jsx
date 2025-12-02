@@ -3,8 +3,8 @@ import { formatCurrency } from '../utils/currency';
 import DashboardLayout from "../layout/DashboardLayout";
 import API from "../services/api";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Hotel, Utensils, Package, Home, DollarSign, Shield, 
+import {
+  Hotel, Utensils, Package, Home, DollarSign, Shield,
   Calendar, Download, Filter, Search, FileText, TrendingUp,
   Users, BedDouble, Receipt, ShoppingCart, AlertTriangle,
   Clock, XCircle, Gift, Box, AlertCircle, FileCheck,
@@ -38,12 +38,12 @@ const SectionCard = ({ title, icon, children, loading, count, className = "" }) 
         {loading && <div className="h-6 w-20 bg-gray-200 rounded-full animate-pulse"></div>}
       </div>
       <div className="overflow-auto max-h-96">
-        {loading 
+        {loading
           ? <div className="space-y-2 mt-2">
-              <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
-              <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
-              <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
-            </div>
+            <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+          </div>
           : children}
       </div>
     </motion.div>
@@ -54,7 +54,7 @@ const DataTable = ({ headers, data, renderRow, emptyMessage = "No data available
   if (!data || data.length === 0) {
     return <div className="text-center py-8 text-gray-500">{emptyMessage}</div>;
   }
-  
+
   return (
     <table className="w-full text-sm text-left">
       <thead className="text-gray-600 uppercase tracking-wider bg-gray-50 sticky top-0">
@@ -87,15 +87,15 @@ const formatDateTime = (dateString) => {
       const timeParts = dateString.split(':');
       return `${timeParts[0]}:${timeParts[1]}`;
     }
-    
+
     const date = new Date(dateString);
     // Check if date is valid
     if (isNaN(date.getTime())) {
       return dateString; // Return original if invalid
     }
-    return date.toLocaleString('en-GB', { 
-      day: '2-digit', 
-      month: 'short', 
+    return date.toLocaleString('en-GB', {
+      day: '2-digit',
+      month: 'short',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -113,11 +113,11 @@ const formatTime = (timeString) => {
       const timeParts = timeString.split(':');
       return `${timeParts[0]}:${timeParts[1]}`;
     }
-    
+
     // Try parsing as datetime and extract time
     const date = new Date(timeString);
     if (!isNaN(date.getTime())) {
-      return date.toLocaleTimeString('en-GB', { 
+      return date.toLocaleTimeString('en-GB', {
         hour: '2-digit',
         minute: '2-digit'
       });
@@ -254,7 +254,7 @@ export default function ComprehensiveReport() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const params = { ...filters };
       // Convert date strings to proper format
       if (params.report_date) params.report_date = params.report_date;
@@ -265,10 +265,8 @@ export default function ComprehensiveReport() {
       // Convert month and year to integers for payroll
       if (params.month) params.month = parseInt(params.month);
       if (params.year) params.year = parseInt(params.year);
-      
-      console.log("Fetching report:", report.endpoint, "with params:", params);
+
       const response = await API.get(report.endpoint, { params });
-      console.log("Report response:", response.data);
       setReportData(response.data);
     } catch (err) {
       console.error("Failed to fetch report:", err);
@@ -310,10 +308,10 @@ export default function ComprehensiveReport() {
   // Get filter configuration for current report
   const getReportFilters = () => {
     if (!activeReport) return [];
-    
+
     const reportId = activeReport.id;
     const baseFilters = [];
-    
+
     // Common date filters
     if (reportId.includes('daily') || reportId === 'occupancy' || reportId === 'night-audit') {
       baseFilters.push({
@@ -338,7 +336,7 @@ export default function ComprehensiveReport() {
         }
       );
     }
-    
+
     // Report-specific filters
     if (reportId === 'expiry-aging') {
       baseFilters.push({
@@ -349,7 +347,7 @@ export default function ComprehensiveReport() {
         placeholder: '3'
       });
     }
-    
+
     if (reportId === 'payroll-register') {
       const today = new Date();
       baseFilters.push({
@@ -371,7 +369,7 @@ export default function ComprehensiveReport() {
         max: 2100
       });
     }
-    
+
     return baseFilters;
   };
 
@@ -420,15 +418,15 @@ export default function ComprehensiveReport() {
         const arrivals = Array.isArray(data) ? data : (data?.arrivals || []);
         const total = Array.isArray(data) ? data.length : (data?.total || 0);
         const reportDate = data?.date || filters.report_date || new Date().toISOString().split('T')[0];
-        
+
         return (
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-800">
-                <strong>Report Date:</strong> {new Date(reportDate).toLocaleDateString('en-GB', { 
-                  day: '2-digit', 
-                  month: 'short', 
-                  year: 'numeric' 
+                <strong>Report Date:</strong> {new Date(reportDate).toLocaleDateString('en-GB', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric'
                 })}
               </p>
               {total === 0 && (
@@ -496,9 +494,9 @@ export default function ComprehensiveReport() {
             <SectionCard title="Total Rooms" icon={<BedDouble className="text-indigo-600" />} count={data.total_rooms} />
             <SectionCard title="Occupied Rooms" icon={<BedDouble className="text-green-600" />} count={data.occupied_rooms} />
             <SectionCard title="Vacant Rooms" icon={<BedDouble className="text-blue-600" />} count={data.vacant_rooms} />
-            <SectionCard 
-              title="Occupancy %" 
-              icon={<TrendingUp className="text-purple-600" />} 
+            <SectionCard
+              title="Occupancy %"
+              icon={<TrendingUp className="text-purple-600" />}
               count={`${data.occupancy_percentage}%`}
             />
           </div>
@@ -670,9 +668,8 @@ export default function ComprehensiveReport() {
                       </span>
                     </td>
                     <td className="p-3">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        item.is_complimentary ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'
-                      }`}>
+                      <span className={`px-2 py-1 text-xs rounded-full ${item.is_complimentary ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'
+                        }`}>
                         {item.reason || (item.is_complimentary ? 'Complimentary' : 'Discount')}
                       </span>
                     </td>
@@ -782,11 +779,10 @@ export default function ComprehensiveReport() {
                       </div>
                     </td>
                     <td className="p-3">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        item.recipient_type === 'Staff' ? 'bg-blue-100 text-blue-800' : 
-                        item.recipient_type === 'Staff/Owner' ? 'bg-purple-100 text-purple-800' : 
-                        'bg-green-100 text-green-800'
-                      }`}>
+                      <span className={`px-2 py-1 text-xs rounded-full ${item.recipient_type === 'Staff' ? 'bg-blue-100 text-blue-800' :
+                          item.recipient_type === 'Staff/Owner' ? 'bg-purple-100 text-purple-800' :
+                            'bg-green-100 text-green-800'
+                        }`}>
                         {item.recipient_type}
                       </span>
                     </td>
@@ -840,9 +836,8 @@ export default function ComprehensiveReport() {
                   <td className="p-3">{formatCurrency(item.unit_price)}</td>
                   <td className="p-3 font-semibold">{formatCurrency(item.stock_value)}</td>
                   <td className="p-3">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      item.status === 'Low Stock' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                    }`}>
+                    <span className={`px-2 py-1 text-xs rounded-full ${item.status === 'Low Stock' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                      }`}>
                       {item.status}
                     </span>
                   </td>
@@ -867,9 +862,8 @@ export default function ComprehensiveReport() {
                   <td className="p-3">{item.min_stock_level} {item.unit}</td>
                   <td className="p-3 text-red-600 font-semibold">{item.shortage} {item.unit}</td>
                   <td className="p-3">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      item.urgency === 'Critical' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'
-                    }`}>
+                    <span className={`px-2 py-1 text-xs rounded-full ${item.urgency === 'Critical' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'
+                      }`}>
                       {item.urgency}
                     </span>
                   </td>
@@ -912,11 +906,10 @@ export default function ComprehensiveReport() {
                     <td className="p-3">{item.host_name || '-'}</td>
                     <td className="p-3">{item.duration_days ? `${item.duration_days} days` : '-'}</td>
                     <td className="p-3">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        item.booking_type === 'Package' ? 'bg-purple-100 text-purple-800' : 
-                        item.booking_type === 'Service Request' ? 'bg-blue-100 text-blue-800' : 
-                        'bg-green-100 text-green-800'
-                      }`}>
+                      <span className={`px-2 py-1 text-xs rounded-full ${item.booking_type === 'Package' ? 'bg-purple-100 text-purple-800' :
+                          item.booking_type === 'Service Request' ? 'bg-blue-100 text-blue-800' :
+                            'bg-green-100 text-green-800'
+                        }`}>
                         {item.booking_type || 'Regular'}
                       </span>
                     </td>
@@ -955,9 +948,8 @@ export default function ComprehensiveReport() {
                     <td className="p-3">{item.location || '-'}</td>
                     <td className="p-3">{item.services_assigned || 0}</td>
                     <td className="p-3">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        item.status === 'Present' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`px-2 py-1 text-xs rounded-full ${item.status === 'Present' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
                         {item.status || '-'}
                       </span>
                     </td>
@@ -1049,9 +1041,8 @@ export default function ComprehensiveReport() {
                     <td className="p-3">{item.adults || 0}</td>
                     <td className="p-3">{item.children || 0}</td>
                     <td className="p-3">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        item.booking_type === 'Package' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                      }`}>
+                      <span className={`px-2 py-1 text-xs rounded-full ${item.booking_type === 'Package' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                        }`}>
                         {item.booking_type || 'Regular'}
                       </span>
                     </td>
@@ -1103,9 +1094,8 @@ export default function ComprehensiveReport() {
                     <td className="p-3">{item.visa_number || '-'}</td>
                     <td className="p-3">{item.nationality || '-'}</td>
                     <td className="p-3">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        item.booking_type === 'Package' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                      }`}>
+                      <span className={`px-2 py-1 text-xs rounded-full ${item.booking_type === 'Package' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                        }`}>
                         {item.booking_type || 'Regular'}
                       </span>
                     </td>
@@ -1135,11 +1125,10 @@ export default function ComprehensiveReport() {
                       {item.room_number ? `Room ${item.room_number}` : (item.location || '-')}
                     </td>
                     <td className="p-3">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        item.status === 'claimed' ? 'bg-green-100 text-green-800' : 
-                        item.status === 'disposed' ? 'bg-gray-100 text-gray-800' : 
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
+                      <span className={`px-2 py-1 text-xs rounded-full ${item.status === 'claimed' ? 'bg-green-100 text-green-800' :
+                          item.status === 'disposed' ? 'bg-gray-100 text-gray-800' :
+                            'bg-yellow-100 text-yellow-800'
+                        }`}>
                         {item.status || 'found'}
                       </span>
                     </td>
@@ -1156,13 +1145,13 @@ export default function ComprehensiveReport() {
       case 'asset-audit':
         const assetAuditData = data?.asset_audit || [];
         const totalAssets = data?.total || 0;
-        
+
         const handleRaiseService = async (asset) => {
           try {
             // Try to find a room by location
             let roomId = null;
             const locationName = asset.mapped_location || asset.location;
-            
+
             if (locationName && asset.location_id) {
               // Try to find a room with matching inventory_location_id
               const roomsResponse = await API.get(`/rooms?skip=0&limit=100`);
@@ -1172,25 +1161,25 @@ export default function ComprehensiveReport() {
                 roomId = matchingRoom.id;
               }
             }
-            
+
             // If no matching room found, use the first available room
             if (!roomId) {
               const roomsResponse = await API.get('/rooms?skip=0&limit=1');
               const rooms = roomsResponse.data || [];
               roomId = rooms.length > 0 ? rooms[0].id : null;
             }
-            
+
             if (!roomId) {
               alert('No rooms available. Please create a room first.');
               return;
             }
-            
+
             const serviceRequest = {
               room_id: roomId,
               request_type: 'service',
               description: `Service request for asset: ${asset.asset_name} (${asset.asset_code}) at location: ${locationName || '-'}`
             };
-            
+
             const response = await API.post('/service-requests', serviceRequest);
             alert(`Service request raised successfully! Request ID: ${response.data?.id || 'N/A'}`);
           } catch (error) {
@@ -1199,13 +1188,13 @@ export default function ComprehensiveReport() {
             alert(`Error: ${errorMsg}`);
           }
         };
-        
+
         const handleRaiseInventoryAudit = async (asset) => {
           try {
             // Try to find a room by location
             let roomId = null;
             const locationName = asset.mapped_location || asset.location;
-            
+
             if (locationName && asset.location_id) {
               // Try to find a room with matching inventory_location_id
               const roomsResponse = await API.get(`/rooms?skip=0&limit=100`);
@@ -1215,25 +1204,25 @@ export default function ComprehensiveReport() {
                 roomId = matchingRoom.id;
               }
             }
-            
+
             // If no matching room found, use the first available room
             if (!roomId) {
               const roomsResponse = await API.get('/rooms?skip=0&limit=1');
               const rooms = roomsResponse.data || [];
               roomId = rooms.length > 0 ? rooms[0].id : null;
             }
-            
+
             if (!roomId) {
               alert('No rooms available. Please create a room first.');
               return;
             }
-            
+
             const auditRequest = {
               room_id: roomId,
               request_type: 'inventory_audit',
               description: `Inventory audit required for asset: ${asset.asset_name} (${asset.asset_code}) at location: ${locationName || '-'}. Status: ${asset.status}. Mapped Location: ${asset.mapped_location || 'N/A'}, Actual Location: ${asset.actual_location || 'N/A'}`
             };
-            
+
             const response = await API.post('/service-requests', auditRequest);
             alert(`Inventory audit service request created successfully! Request ID: ${response.data?.id || 'N/A'}`);
           } catch (error) {
@@ -1242,13 +1231,13 @@ export default function ComprehensiveReport() {
             alert(`Error: ${errorMsg}`);
           }
         };
-        
+
         const handleRaiseMaintenanceTicket = async (asset) => {
           try {
             // Try to find a room by location
             let roomId = null;
             const locationName = asset.mapped_location || asset.location;
-            
+
             if (locationName && asset.location_id) {
               // Try to find a room with matching inventory_location_id
               const roomsResponse = await API.get(`/rooms?skip=0&limit=100`);
@@ -1258,25 +1247,25 @@ export default function ComprehensiveReport() {
                 roomId = matchingRoom.id;
               }
             }
-            
+
             // If no matching room found, use the first available room
             if (!roomId) {
               const roomsResponse = await API.get('/rooms?skip=0&limit=1');
               const rooms = roomsResponse.data || [];
               roomId = rooms.length > 0 ? rooms[0].id : null;
             }
-            
+
             if (!roomId) {
               alert('No rooms available. Please create a room first.');
               return;
             }
-            
+
             const maintenanceRequest = {
               room_id: roomId,
               request_type: 'maintenance',
               description: `Maintenance ticket for asset: ${asset.asset_name} (${asset.asset_code}) at location: ${locationName || '-'}. Status: ${asset.status}`
             };
-            
+
             await API.post('/service-requests', maintenanceRequest);
             alert('Maintenance ticket raised successfully!');
           } catch (error) {
@@ -1284,7 +1273,7 @@ export default function ComprehensiveReport() {
             alert('Failed to raise maintenance ticket. Please try again.');
           }
         };
-        
+
         return (
           <div className="space-y-4">
             <SectionCard title="Asset Audit Report" icon={<FileCheck className="text-green-600" />} loading={loading} count={totalAssets}>
@@ -1299,9 +1288,8 @@ export default function ComprehensiveReport() {
                     <td className="p-3">{item.mapped_location || '-'}</td>
                     <td className="p-3">{item.actual_location || '-'}</td>
                     <td className="p-3">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        item.status === 'Match' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`px-2 py-1 text-xs rounded-full ${item.status === 'Match' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
                         {item.status}
                       </span>
                     </td>
@@ -1341,10 +1329,10 @@ export default function ComprehensiveReport() {
       default:
         // Generic table renderer for other reports
         const dataKeys = Object.keys(data || {});
-        const tableData = dataKeys.length > 0 && Array.isArray(data[dataKeys[0]]) 
-          ? data[dataKeys[0]] 
+        const tableData = dataKeys.length > 0 && Array.isArray(data[dataKeys[0]])
+          ? data[dataKeys[0]]
           : (Array.isArray(data) ? data : []);
-        
+
         if (tableData.length === 0) {
           return (
             <div className="bg-white rounded-lg p-8 text-center">
@@ -1367,12 +1355,12 @@ export default function ComprehensiveReport() {
                       {typeof item[header] === 'number' && (header.includes('amount') || header.includes('price') || header.includes('total') || header.includes('salary'))
                         ? formatCurrency(item[header])
                         : typeof item[header] === 'string' && item[header].includes('T') && item[header].includes('-')
-                        ? formatDate(item[header])
-                        : Array.isArray(item[header])
-                        ? item[header].join(', ')
-                        : (item[header] === null || item[header] === undefined || item[header] === 'N/A' || item[header] === 'na' || item[header] === '')
-                        ? '-'
-                        : String(item[header])}
+                          ? formatDate(item[header])
+                          : Array.isArray(item[header])
+                            ? item[header].join(', ')
+                            : (item[header] === null || item[header] === undefined || item[header] === 'N/A' || item[header] === 'na' || item[header] === '')
+                              ? '-'
+                              : String(item[header])}
                     </td>
                   ))}
                 </tr>
@@ -1424,7 +1412,7 @@ export default function ComprehensiveReport() {
                     }
                     return 'bg-gray-100 text-gray-700 hover:bg-gray-200';
                   };
-                  
+
                   return (
                     <button
                       key={tab.id}
@@ -1440,23 +1428,23 @@ export default function ComprehensiveReport() {
             </div>
 
             {/* Reports List */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {reportDefinitions[activeTab]?.map((report) => (
-                  <motion.div
-                    key={report.id}
-                    onClick={() => handleReportSelect(report)}
-                    className="bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow border-2 border-transparent hover:border-indigo-300"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <div className="flex items-center gap-3 mb-2">
-                      <report.icon className="h-6 w-6 text-indigo-600" />
-                      <h3 className="font-semibold text-gray-800">{report.name}</h3>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-2">Click to view report</p>
-                  </motion.div>
-                ))}
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {reportDefinitions[activeTab]?.map((report) => (
+                <motion.div
+                  key={report.id}
+                  onClick={() => handleReportSelect(report)}
+                  className="bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow border-2 border-transparent hover:border-indigo-300"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <report.icon className="h-6 w-6 text-indigo-600" />
+                    <h3 className="font-semibold text-gray-800">{report.name}</h3>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-2">Click to view report</p>
+                </motion.div>
+              ))}
+            </div>
             )}
           </div>
         ) : (
@@ -1468,7 +1456,7 @@ export default function ComprehensiveReport() {
                 <activeReport.icon className="h-8 w-8 text-indigo-600" />
                 <h2 className="text-2xl font-bold text-gray-800">{activeReport.name}</h2>
               </div>
-              
+
               {/* Filters */}
               {getReportFilters().length > 0 && (
                 <>

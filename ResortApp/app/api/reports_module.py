@@ -54,7 +54,8 @@ def get_daily_arrival_report(
         PackageBooking.check_in == report_date
     ).options(
         joinedload(PackageBooking.package_booking_rooms).joinedload(PackageBookingRoom.room),
-        joinedload(PackageBooking.user)
+        joinedload(PackageBooking.user),
+        joinedload(PackageBooking.package)
     ).offset(skip).limit(limit).all()
     
     result = []
@@ -344,7 +345,8 @@ def get_in_house_guest_list(
             PackageBooking.status == "checked-in"
         )
     ).options(
-        joinedload(PackageBooking.package_booking_rooms).joinedload(PackageBookingRoom.room)
+        joinedload(PackageBooking.package_booking_rooms).joinedload(PackageBookingRoom.room),
+        joinedload(PackageBooking.package)
     ).offset(skip).limit(limit).all()
     
     result = []
@@ -851,37 +853,40 @@ def get_waste_spoilage_report(
     current_user: dict = Depends(get_current_user)
 ):
     """Waste & Spoilage Report: Value of items thrown away"""
-    query = db.query(WasteLog).options(
-        joinedload(WasteLog.item)
-    )
-    
-    if start_date:
-        query = query.filter(func.date(WasteLog.created_at) >= start_date)
-    if end_date:
-        query = query.filter(func.date(WasteLog.created_at) <= end_date)
-    
-    waste_logs = query.order_by(WasteLog.created_at.desc()).offset(skip).limit(limit).all()
-    
-    result = []
-    total_waste_value = 0
-    for waste in waste_logs:
-        waste_value = waste.quantity * (waste.item.unit_price if waste.item else 0)
-        total_waste_value += waste_value
-        result.append({
-            "item_name": waste.item.name if waste.item else "N/A",
-            "quantity": float(waste.quantity),
-            "unit": waste.item.unit if waste.item else "N/A",
-            "waste_value": float(waste_value),
-            "reason": waste.reason,
-            "waste_date": waste.created_at.isoformat() if waste.created_at else None,
-            "reported_by": getattr(waste, 'reported_by', 'N/A')
-        })
-    
-    return {
-        "waste_logs": result,
-        "total_waste_value": float(total_waste_value),
-        "total": len(result)
-    }
+    try:
+        query = db.query(WasteLog).options(
+            joinedload(WasteLog.item)
+        )
+        
+        if start_date:
+            query = query.filter(func.date(WasteLog.created_at) >= start_date)
+        if end_date:
+            query = query.filter(func.date(WasteLog.created_at) <= end_date)
+        
+        waste_logs = query.order_by(WasteLog.created_at.desc()).offset(skip).limit(limit).all()
+        
+        result = []
+        total_waste_value = 0
+        for waste in waste_logs:
+            waste_value = waste.quantity * (waste.item.unit_price if waste.item else 0)
+            total_waste_value += waste_value
+            result.append({
+                "item_name": waste.item.name if waste.item else "N/A",
+                "quantity": float(waste.quantity),
+                "unit": waste.item.unit if waste.item else "N/A",
+                "waste_value": float(waste_value),
+                "reason": waste.reason,
+                "waste_date": waste.created_at.isoformat() if waste.created_at else None,
+                "reported_by": getattr(waste, 'reported_by', 'N/A')
+            })
+        
+        return {
+            "waste_logs": result,
+            "total_waste_value": float(total_waste_value),
+            "total": len(result)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching waste/spoilage report: {str(e)}")
 
 
 @router.get("/inventory/purchase-register")
@@ -896,34 +901,37 @@ def get_purchase_register(
     current_user: dict = Depends(get_current_user)
 ):
     """Purchase Register: List of all Vendor Bills entered"""
-    query = db.query(PurchaseMaster).options(
-        joinedload(PurchaseMaster.vendor),
-        joinedload(PurchaseMaster.details).joinedload(PurchaseDetail.item)
-    )
-    
-    if start_date:
-        query = query.filter(PurchaseMaster.purchase_date >= start_date)
-    if end_date:
-        query = query.filter(PurchaseMaster.purchase_date <= end_date)
-    if vendor_id:
-        query = query.filter(PurchaseMaster.vendor_id == vendor_id)
-    
-    purchases = query.order_by(PurchaseMaster.purchase_date.desc()).offset(skip).limit(limit).all()
-    
-    result = []
-    for purchase in purchases:
-        result.append({
-            "purchase_id": purchase.id,
-            "invoice_number": purchase.invoice_number,
-            "vendor_name": purchase.vendor.name if purchase.vendor else "N/A",
-            "purchase_date": purchase.purchase_date.isoformat() if purchase.purchase_date else None,
-            "total_amount": float(purchase.total_amount),
-            "tax_amount": float(purchase.tax_amount),
-            "payment_status": purchase.payment_status,
-            "items_count": len(purchase.details)
-        })
-    
-    return {"purchases": result, "total": len(result)}
+    try:
+        query = db.query(PurchaseMaster).options(
+            joinedload(PurchaseMaster.vendor),
+            joinedload(PurchaseMaster.details).joinedload(PurchaseDetail.item)
+        )
+        
+        if start_date:
+            query = query.filter(PurchaseMaster.purchase_date >= start_date)
+        if end_date:
+            query = query.filter(PurchaseMaster.purchase_date <= end_date)
+        if vendor_id:
+            query = query.filter(PurchaseMaster.vendor_id == vendor_id)
+        
+        purchases = query.order_by(PurchaseMaster.purchase_date.desc()).offset(skip).limit(limit).all()
+        
+        result = []
+        for purchase in purchases:
+            result.append({
+                "purchase_id": purchase.id,
+                "invoice_number": purchase.invoice_number,
+                "vendor_name": purchase.vendor.name if purchase.vendor else "N/A",
+                "purchase_date": purchase.purchase_date.isoformat() if purchase.purchase_date else None,
+                "total_amount": float(purchase.total_amount),
+                "tax_amount": float(purchase.tax_amount),
+                "payment_status": purchase.payment_status,
+                "items_count": len(purchase.details)
+            })
+        
+        return {"purchases": result, "total": len(result)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching purchase register: {str(e)}")
 
 
 @router.get("/inventory/variance")
