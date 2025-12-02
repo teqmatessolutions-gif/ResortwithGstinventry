@@ -54,7 +54,7 @@ def get_daily_arrival_report(
         package_bookings = db.query(PackageBooking).filter(
             PackageBooking.check_in == report_date
         ).options(
-            joinedload(PackageBooking.package_booking_rooms).joinedload(PackageBookingRoom.room),
+            joinedload(PackageBooking.rooms).joinedload(PackageBookingRoom.room),
             joinedload(PackageBooking.user),
             joinedload(PackageBooking.package)
         ).offset(skip).limit(limit).all()
@@ -77,7 +77,7 @@ def get_daily_arrival_report(
                 })
         
         for pkg_booking in package_bookings:
-            for pbr in pkg_booking.package_booking_rooms:
+            for pbr in pkg_booking.rooms:
                 result.append({
                     "guest_name": pkg_booking.guest_name,
                     "guest_mobile": pkg_booking.guest_mobile,
@@ -349,7 +349,7 @@ def get_in_house_guest_list(
                 PackageBooking.status == "checked-in"
             )
         ).options(
-            joinedload(PackageBooking.package_booking_rooms).joinedload(PackageBookingRoom.room),
+            joinedload(PackageBooking.rooms).joinedload(PackageBookingRoom.room),
             joinedload(PackageBooking.package)
         ).offset(skip).limit(limit).all()
         
@@ -368,7 +368,7 @@ def get_in_house_guest_list(
                 })
         
         for pkg_booking in package_bookings:
-            for pbr in pkg_booking.package_booking_rooms:
+            for pbr in pkg_booking.rooms:
                 result.append({
                     "guest_name": pkg_booking.guest_name,
                     "guest_mobile": pkg_booking.guest_mobile,
