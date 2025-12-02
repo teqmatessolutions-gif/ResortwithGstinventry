@@ -4,11 +4,12 @@ from typing import List, Optional
 import os
 import shutil
 import uuid
+from datetime import datetime
 from app.utils.auth import get_db, get_current_user
 from app.models.user import User
 from app.curd import inventory as inventory_crud
 from app.schemas.inventory import (
-    InventoryCategoryCreate, InventoryCategoryOut,
+    InventoryCategoryCreate, InventoryCategoryUpdate, InventoryCategoryOut,
     InventoryItemCreate, InventoryItemUpdate, InventoryItemOut,
     VendorCreate, VendorUpdate, VendorOut,
     PurchaseMasterCreate, PurchaseMasterUpdate, PurchaseMasterOut,
@@ -58,6 +59,28 @@ def update_category(
     if not updated:
         raise HTTPException(status_code=404, detail="Category not found")
     return updated
+
+
+@router.delete("/categories/{category_id}")
+def delete_category(
+    category_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Check if category exists
+    category = inventory_crud.get_category_by_id(db, category_id)
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    # Check if category has items
+    from app.models.inventory import InventoryItem
+    items_count = db.query(InventoryItem).filter(InventoryItem.category_id == category_id).count()
+    if items_count > 0:
+        raise HTTPException(status_code=400, detail="Cannot delete category with associated items")
+        
+    db.delete(category)
+    db.commit()
+    return {"message": "Category deleted successfully"}
 
 
 # Item Endpoints
@@ -316,6 +339,32 @@ async def update_item(
         raise HTTPException(status_code=500, detail=f"Error updating item: {str(e)}")
 
 
+@router.delete("/items/{item_id}")
+def delete_item(
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    item = inventory_crud.get_item_by_id(db, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    # Check if item has transactions or stock
+    from app.models.inventory import InventoryTransaction, PurchaseDetail
+    trans_count = db.query(InventoryTransaction).filter(InventoryTransaction.item_id == item_id).count()
+    purchase_count = db.query(PurchaseDetail).filter(PurchaseDetail.item_id == item_id).count()
+    
+    if trans_count > 0 or purchase_count > 0:
+        # Soft delete instead
+        item.is_active = False
+        db.commit()
+        return {"message": "Item deactivated (cannot delete due to existing history)"}
+        
+    db.delete(item)
+    db.commit()
+    return {"message": "Item deleted successfully"}
+
+
 # Vendor Endpoints
 @router.post("/vendors", response_model=VendorOut)
 def create_vendor(
@@ -531,6 +580,29 @@ def update_purchase(
             
     # Return full response with details
     return get_purchase(purchase_id, db, current_user)
+
+
+@router.delete("/purchases/{purchase_id}")
+def delete_purchase(
+    purchase_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    purchase = inventory_crud.get_purchase_by_id(db, purchase_id)
+    if not purchase:
+        raise HTTPException(status_code=404, detail="Purchase not found")
+    
+    # Only allow deleting draft purchases
+    if purchase.status not in ["draft", "cancelled"]:
+        raise HTTPException(status_code=400, detail="Cannot delete purchase that is not draft or cancelled")
+    
+    # Delete details first
+    from app.models.inventory import PurchaseDetail
+    db.query(PurchaseDetail).filter(PurchaseDetail.purchase_master_id == purchase_id).delete()
+    
+    db.delete(purchase)
+    db.commit()
+    return {"message": "Purchase deleted successfully"}
 
 
 @router.post("/purchases/{purchase_id}/payments")

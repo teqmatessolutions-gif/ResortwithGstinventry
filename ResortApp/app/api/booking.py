@@ -782,6 +782,28 @@ def check_in_booking(
         room_ids = [br.room_id for br in booking.booking_rooms]
         db.query(Room).filter(Room.id.in_(room_ids)).update({"status": "Checked-in"}, synchronize_session=False)
 
+    # Create notification for check-in
+    try:
+        from app.models.notification import Notification
+        # Get room numbers for notification
+        room_numbers = ", ".join([f"#{br.room.number}" for br in booking.booking_rooms if br.room])
+        formatted_booking_id = f"BK-{str(booking_id).zfill(6)}"
+        
+        notification = Notification(
+            user_id=current_user.id,
+            title=f"Guest Checked In - {formatted_booking_id}",
+            message=f"Guest {booking.guest_name} has successfully checked in. Booking ID: {formatted_booking_id}, Room(s): {room_numbers}",
+            type="check_in",
+            reference_id=booking_id,
+            reference_type="booking",
+            is_read=False,
+            created_at=datetime.utcnow()
+        )
+        db.add(notification)
+    except Exception as e:
+        # Log error but don't fail the check-in
+        print(f"Warning: Failed to create check-in notification: {str(e)}")
+
     db.commit()
     db.refresh(booking)
     return booking

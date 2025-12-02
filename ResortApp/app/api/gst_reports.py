@@ -2337,58 +2337,6 @@ def get_master_gst_summary(
             }
         }
 
-        # 1. Total Output Tax (from sales)
-        output_tax_query = db.query(func.sum(Checkout.tax_amount))
-        if start_dt:
-            output_tax_query = output_tax_query.filter(Checkout.checkout_date >= start_dt)
-        if end_dt:
-            output_tax_query = output_tax_query.filter(Checkout.checkout_date <= end_dt)
-        total_output_tax = float(output_tax_query.scalar() or 0)
-
-        # 2. Input Tax Credit (from purchases)
-        itc_query = db.query(
-            func.sum(PurchaseDetail.igst_amount + PurchaseDetail.cgst_amount + PurchaseDetail.sgst_amount)
-        ).join(PurchaseMaster).join(PurchaseDetail.item).join(InventoryCategory).filter(
-            InventoryCategory.itc_eligibility == "Eligible"
-        )
-        if start_dt:
-            itc_query = itc_query.filter(PurchaseMaster.purchase_date >= start_dt.date() if isinstance(start_dt, datetime) else start_dt)
-        if end_dt:
-            itc_query = itc_query.filter(PurchaseMaster.purchase_date <= end_dt.date() if isinstance(end_dt, datetime) else end_dt)
-        total_itc = float(itc_query.scalar() or 0)
-
-        # 3. RCM Liability
-        rcm_query = db.query(
-            func.sum(PurchaseDetail.igst_amount + PurchaseDetail.cgst_amount + PurchaseDetail.sgst_amount)
-        ).join(PurchaseMaster).join(Vendor).filter(Vendor.rcm_applicable == True)
-        if start_dt:
-            rcm_query = rcm_query.filter(PurchaseMaster.purchase_date >= start_dt.date() if isinstance(start_dt, datetime) else start_dt)
-        if end_dt:
-            rcm_query = rcm_query.filter(PurchaseMaster.purchase_date <= end_dt.date() if isinstance(end_dt, datetime) else end_dt)
-        total_rcm = float(rcm_query.scalar() or 0)
-
-        # 4. Net Payable
-        net_payable = total_output_tax - total_itc + total_rcm
-
-        return {
-            "period": {"start_date": start_date, "end_date": end_date},
-            "total_output_tax": round(total_output_tax, 2),
-            "input_tax_credit": round(total_itc, 2),
-            "rcm_liability": round(total_rcm, 2),
-            "net_cash_ledger_payable": round(net_payable, 2),
-            "breakdown": {
-                "output_tax_breakdown": {
-                    "cgst": round(total_output_tax / 2, 2),  # Simplified - assumes intra-state
-                    "sgst": round(total_output_tax / 2, 2),
-                    "igst": 0.0
-                },
-                "itc_breakdown": {
-                    "cgst": round(total_itc / 2, 2),
-                    "sgst": round(total_itc / 2, 2),
-                    "igst": 0.0
-                }
-            }
-        }
     except Exception as e:
         import traceback
         print(f"Error in Master GST Summary: {str(e)}\n{traceback.format_exc()}")

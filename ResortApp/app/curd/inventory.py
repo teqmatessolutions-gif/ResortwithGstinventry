@@ -8,7 +8,7 @@ from app.models.inventory import (
     StockRequisition, StockRequisitionDetail, StockIssue, StockIssueDetail, WasteLog, Location, AssetMapping
 )
 from app.schemas.inventory import (
-    InventoryCategoryCreate, InventoryItemCreate, VendorCreate, PurchaseMasterCreate
+    InventoryCategoryCreate, InventoryCategoryUpdate, InventoryItemCreate, InventoryItemUpdate, VendorCreate, PurchaseMasterCreate, PurchaseMasterUpdate
 )
 
 
@@ -72,7 +72,8 @@ def update_item(db: Session, item_id: int, data: InventoryItemUpdate):
         return None
     
     for field, value in data.dict(exclude_unset=True).items():
-        setattr(item, field, value)
+        if value is not None:
+            setattr(item, field, value)
     
     db.commit()
     db.refresh(item)

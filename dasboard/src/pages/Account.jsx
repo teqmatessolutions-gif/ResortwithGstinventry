@@ -28,9 +28,9 @@ const KpiCard = ({ title, value, icon, prefix = "", suffix = "", loading, decima
         <p className="text-gray-500 text-sm font-medium">{title}</p>
         <div className="text-3xl font-bold text-gray-800">
           {prefix && <span>{prefix}</span>}
-          <CountUp 
-            end={formattedValue} 
-            duration={1.5} 
+          <CountUp
+            end={formattedValue}
+            duration={1.5}
             decimals={decimals}
             separator=","
           />
@@ -99,7 +99,7 @@ const CHART_COLORS = ["#4f46e5", "#10b981", "#f59e0b", "#ef4444", "#3b82f6"];
 
 export default function ReportsDashboard() {
   const [activeMainTab, setActiveMainTab] = useState("reports"); // "reports" or "accounting"
-  
+
   // Reports Tab State
   const [loading, setLoading] = useState(true);
   const [chartLoading, setChartLoading] = useState(true);
@@ -127,7 +127,7 @@ export default function ReportsDashboard() {
     inventory: { skip: 0, hasMore: true },
   });
   const PAGE_LIMIT = 10;
-  
+
   // Accounting Tab State
   const [activeAccountingTab, setActiveAccountingTab] = useState("chart-of-accounts");
   const [accountGroups, setAccountGroups] = useState([]);
@@ -146,13 +146,13 @@ export default function ReportsDashboard() {
   const [autoReportLoading, setAutoReportLoading] = useState(false);
   const [reportStartDate, setReportStartDate] = useState("");
   const [reportEndDate, setReportEndDate] = useState("");
-  
+
   // Comprehensive Report States
   const [comprehensiveReport, setComprehensiveReport] = useState(null);
   const [comprehensiveReportLoading, setComprehensiveReportLoading] = useState(false);
   const [compReportStartDate, setCompReportStartDate] = useState("");
   const [compReportEndDate, setCompReportEndDate] = useState("");
-  
+
   // GST Reports States
   const [gstReportType, setGstReportType] = useState("master-summary");
   const [gstReportData, setGstReportData] = useState(null);
@@ -161,8 +161,8 @@ export default function ReportsDashboard() {
   const [gstEndDate, setGstEndDate] = useState("");
   const [gstr2bReconcileData, setGstr2bReconcileData] = useState(null);
   const [gstr2bLoading, setGstr2bLoading] = useState(false);
-  
-  
+
+
   // Department Reports States
   const [activeReportsTab, setActiveReportsTab] = useState("dashboard"); // "dashboard" or "department-reports"
   const [activeDepartmentTab, setActiveDepartmentTab] = useState("front-office"); // front-office, restaurant, inventory, housekeeping, security-hr, management
@@ -172,11 +172,11 @@ export default function ReportsDashboard() {
   const [deptReportStartDate, setDeptReportStartDate] = useState("");
   const [deptReportEndDate, setDeptReportEndDate] = useState("");
   const [deptReportDate, setDeptReportDate] = useState(getCurrentDateIST());
-  
+
   // Helper function to extract data array from response
   const extractReportData = (data) => {
     if (!data || data.error) return { dataArray: [], dataKeys: [] };
-    
+
     // Check if response is an array
     if (Array.isArray(data)) {
       return {
@@ -184,14 +184,14 @@ export default function ReportsDashboard() {
         dataKeys: data.length > 0 ? Object.keys(data[0]) : []
       };
     }
-    
+
     // Check for common response keys
-    const arrayKeys = ['arrivals', 'departures', 'in_house_guests', 'items', 'stock_status', 
-                       'low_stock_items', 'waste_logs', 'purchases', 'attendance_logs', 
-                       'payroll', 'voided_orders', 'discounts_complimentary', 'nc_orders',
-                       'expiring_items', 'stock_movements', 'variance_report', 'discrepancies',
-                       'minibar_consumption', 'asset_audit', 'visitors', 'access_logs'];
-    
+    const arrayKeys = ['arrivals', 'departures', 'in_house_guests', 'items', 'stock_status',
+      'low_stock_items', 'waste_logs', 'purchases', 'attendance_logs',
+      'payroll', 'voided_orders', 'discounts_complimentary', 'nc_orders',
+      'expiring_items', 'stock_movements', 'variance_report', 'discrepancies',
+      'minibar_consumption', 'asset_audit', 'visitors', 'access_logs'];
+
     for (const key of arrayKeys) {
       if (data[key] && Array.isArray(data[key]) && data[key].length > 0) {
         return {
@@ -200,7 +200,7 @@ export default function ReportsDashboard() {
         };
       }
     }
-    
+
     // Check for first key that is an array
     const firstKey = Object.keys(data)[0];
     if (firstKey && Array.isArray(data[firstKey])) {
@@ -209,7 +209,7 @@ export default function ReportsDashboard() {
         dataKeys: data[firstKey].length > 0 ? Object.keys(data[firstKey][0]) : []
       };
     }
-    
+
     return { dataArray: [], dataKeys: [] };
   };
 
@@ -262,13 +262,13 @@ export default function ReportsDashboard() {
           "dashboard": `/reports/management/dashboard?report_date=${deptReportDate}`
         }
       };
-      
+
       const endpoint = endpointMap[activeDepartmentTab]?.[departmentReportType];
       if (!endpoint) {
         setDepartmentReportData({ error: "Report type not found" });
         return;
       }
-      
+
       const response = await api.get(endpoint);
       setDepartmentReportData(response.data);
     } catch (error) {
@@ -283,21 +283,21 @@ export default function ReportsDashboard() {
   useEffect(() => {
     if (activeMainTab === "reports" && activeDepartmentTab && departmentReportType) {
       // Auto-fetch for certain report types that don't need date filters
-      if (departmentReportType === "occupancy" || departmentReportType === "in-house-guests" || 
-          departmentReportType === "stock-status" || departmentReportType === "low-stock-alert" ||
-          departmentReportType === "room-discrepancy" || departmentReportType === "dashboard") {
+      if (departmentReportType === "occupancy" || departmentReportType === "in-house-guests" ||
+        departmentReportType === "stock-status" || departmentReportType === "low-stock-alert" ||
+        departmentReportType === "room-discrepancy" || departmentReportType === "dashboard") {
         fetchDepartmentReport();
       }
     }
   }, [activeDepartmentTab, departmentReportType, activeMainTab]);
-  
+
   // Accounting Form States
   const [groupForm, setGroupForm] = useState({
     name: "",
     account_type: "Revenue",
     description: ""
   });
-  
+
   const [ledgerForm, setLedgerForm] = useState({
     name: "",
     code: "",
@@ -313,7 +313,7 @@ export default function ReportsDashboard() {
     ifsc_code: "",
     branch_name: ""
   });
-  
+
   const [journalForm, setJournalForm] = useState({
     entry_date: getCurrentDateIST(),
     description: "",
@@ -448,11 +448,11 @@ export default function ReportsDashboard() {
         setDetailsLoading(true);
         // Reset pagination on period change
         setPagination({
-            roomBookings: { skip: 0, hasMore: true },
-            packageBookings: { skip: 0, hasMore: true },
-            foodOrders: { skip: 0, hasMore: true },
-            expenses: { skip: 0, hasMore: true },
-            employees: { skip: 0, hasMore: true },
+          roomBookings: { skip: 0, hasMore: true },
+          packageBookings: { skip: 0, hasMore: true },
+          foodOrders: { skip: 0, hasMore: true },
+          expenses: { skip: 0, hasMore: true },
+          employees: { skip: 0, hasMore: true },
         });
 
         const fromDate = getPeriodDate(period);
@@ -479,7 +479,7 @@ export default function ReportsDashboard() {
         const map = {};
         (roomsRes.data || []).forEach(r => { map[r.id] = r.number; });
         setRoomMap(map);
-        
+
         // Use a single state update to prevent blinking
         // Normalize food orders to include room_number and created_at if possible
         const normalizedFood = (foodOrdersRes.data || []).map(o => ({
@@ -736,7 +736,7 @@ export default function ReportsDashboard() {
         opening_balance: parseFloat(ledgerForm.opening_balance) || 0,
         tax_rate: ledgerForm.tax_rate ? parseFloat(ledgerForm.tax_rate) : null
       };
-      
+
       if (editingLedger) {
         await api.put(`/accounts/ledgers/${editingLedger.id}`, payload);
       } else {
@@ -788,12 +788,12 @@ export default function ReportsDashboard() {
       const totalCredits = journalForm.lines
         .filter(line => line.credit_ledger_id)
         .reduce((sum, line) => sum + (parseFloat(line.amount) || 0), 0);
-      
+
       if (Math.abs(totalDebits - totalCredits) > 0.01) {
         alert(`Journal entry must balance. Debits: ₹${totalDebits.toFixed(2)}, Credits: ₹${totalCredits.toFixed(2)}`);
         return;
       }
-      
+
       const payload = {
         ...journalForm,
         entry_date: new Date(journalForm.entry_date + 'T00:00:00+05:30').toISOString(),
@@ -804,7 +804,7 @@ export default function ReportsDashboard() {
           amount: parseFloat(line.amount) || 0
         }))
       };
-      
+
       await api.post("/accounts/journal-entries", payload);
       setShowJournalModal(false);
       setJournalForm({
@@ -862,22 +862,20 @@ export default function ReportsDashboard() {
           <div className="flex space-x-2 border-b border-gray-200">
             <button
               onClick={() => setActiveMainTab("reports")}
-              className={`px-4 py-2 font-medium ${
-                activeMainTab === "reports"
+              className={`px-4 py-2 font-medium ${activeMainTab === "reports"
                   ? "border-b-2 border-indigo-600 text-indigo-600"
                   : "text-gray-600 hover:text-gray-800"
-              }`}
+                }`}
             >
               <TrendingUp className="inline mr-2" size={18} />
               Reports
             </button>
             <button
               onClick={() => setActiveMainTab("accounting")}
-              className={`px-4 py-2 font-medium ${
-                activeMainTab === "accounting"
+              className={`px-4 py-2 font-medium ${activeMainTab === "accounting"
                   ? "border-b-2 border-indigo-600 text-indigo-600"
                   : "text-gray-600 hover:text-gray-800"
-              }`}
+                }`}
             >
               <BookOpen className="inline mr-2" size={18} />
               Accounting
@@ -908,7 +906,7 @@ export default function ReportsDashboard() {
               <KpiCard title="Room Bookings" value={kpiData.room_bookings || 0} loading={loading} icon={<BedDouble className="text-purple-500 w-8 h-8" />} />
               <KpiCard title="Package Bookings" value={kpiData.package_bookings || 0} loading={loading} icon={<Package className="text-indigo-500 w-8 h-8" />} />
               <KpiCard title="Total Bookings" value={kpiData.total_bookings || 0} loading={loading} icon={<Calendar className="text-blue-500 w-8 h-8" />} />
-              
+
               <KpiCard title="Food Orders" value={kpiData.food_orders || 0} loading={loading} icon={<Utensils className="text-orange-500 w-8 h-8" />} />
               <KpiCard title="Services Assigned" value={kpiData.assigned_services || 0} loading={loading} icon={<ConciergeBell className="text-teal-500 w-8 h-8" />} />
               <KpiCard title="Services Completed" value={kpiData.completed_services || 0} loading={loading} icon={<CheckCircle className="text-green-500 w-8 h-8" />} />
@@ -920,7 +918,7 @@ export default function ReportsDashboard() {
               <KpiCard title="Total Salary" value={kpiData.total_salary || 0} prefix="₹" decimals={2} loading={loading} icon={<Briefcase className="text-gray-600 w-8 h-8" />} />
 
               <KpiCard title="Food Items" value={kpiData.food_items_available || 0} suffix=" Available" loading={loading} icon={<Utensils className="text-yellow-500 w-8 h-8" />} />
-              
+
               <KpiCard title="Inventory Categories" value={kpiData.inventory_categories || 0} loading={loading} icon={<Tag className="text-pink-500 w-8 h-8" />} />
               <KpiCard title="Inventory Departments" value={kpiData.inventory_departments || 0} loading={loading} icon={<Building2 className="text-indigo-500 w-8 h-8" />} />
               <KpiCard title="Service Revenue" value={kpiData.total_service_revenue || 0} prefix="₹" decimals={2} loading={loading} icon={<ConciergeBell className="text-violet-500 w-8 h-8" />} />
@@ -993,9 +991,9 @@ export default function ReportsDashboard() {
                 {/* Department-wise Financial Charts */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
                   {/* Assets Comparison Chart */}
-                  <SectionCard 
-                    title="Assets by Department" 
-                    icon={<TrendingUp className="text-green-600 w-6 h-6" />} 
+                  <SectionCard
+                    title="Assets by Department"
+                    icon={<TrendingUp className="text-green-600 w-6 h-6" />}
                     loading={loading}
                   >
                     <ResponsiveContainer width="100%" height={300}>
@@ -1013,9 +1011,9 @@ export default function ReportsDashboard() {
                   </SectionCard>
 
                   {/* Income vs Expenses Comparison */}
-                  <SectionCard 
-                    title="Income vs Expenses by Department" 
-                    icon={<ArrowUpDown className="text-blue-600 w-6 h-6" />} 
+                  <SectionCard
+                    title="Income vs Expenses by Department"
+                    icon={<ArrowUpDown className="text-blue-600 w-6 h-6" />}
                     loading={loading}
                   >
                     <ResponsiveContainer width="100%" height={300}>
@@ -1036,9 +1034,9 @@ export default function ReportsDashboard() {
                   </SectionCard>
 
                   {/* Income Distribution Pie Chart */}
-                  <SectionCard 
-                    title="Income Distribution" 
-                    icon={<DollarSign className="text-blue-600 w-6 h-6" />} 
+                  <SectionCard
+                    title="Income Distribution"
+                    icon={<DollarSign className="text-blue-600 w-6 h-6" />}
                     loading={loading}
                   >
                     <ResponsiveContainer width="100%" height={300}>
@@ -1071,9 +1069,9 @@ export default function ReportsDashboard() {
                   </SectionCard>
 
                   {/* Net Profit Comparison */}
-                  <SectionCard 
-                    title="Net Profit by Department" 
-                    icon={<TrendingUp className="text-green-600 w-6 h-6" />} 
+                  <SectionCard
+                    title="Net Profit by Department"
+                    icon={<TrendingUp className="text-green-600 w-6 h-6" />}
                     loading={loading}
                   >
                     <ResponsiveContainer width="100%" height={300}>
@@ -1151,66 +1149,60 @@ export default function ReportsDashboard() {
             <div className="flex space-x-2 border-b border-gray-200">
               <button
                 onClick={() => setActiveAccountingTab("chart-of-accounts")}
-                className={`px-4 py-2 font-medium ${
-                  activeAccountingTab === "chart-of-accounts"
+                className={`px-4 py-2 font-medium ${activeAccountingTab === "chart-of-accounts"
                     ? "border-b-2 border-indigo-600 text-indigo-600"
                     : "text-gray-600 hover:text-gray-800"
-                }`}
+                  }`}
               >
                 <BookOpen className="inline mr-2" size={18} />
                 Chart of Accounts
               </button>
               <button
                 onClick={() => setActiveAccountingTab("journal-entries")}
-                className={`px-4 py-2 font-medium ${
-                  activeAccountingTab === "journal-entries"
+                className={`px-4 py-2 font-medium ${activeAccountingTab === "journal-entries"
                     ? "border-b-2 border-indigo-600 text-indigo-600"
                     : "text-gray-600 hover:text-gray-800"
-                }`}
+                  }`}
               >
                 <FileText className="inline mr-2" size={18} />
                 Journal Entries
               </button>
               <button
                 onClick={() => setActiveAccountingTab("trial-balance")}
-                className={`px-4 py-2 font-medium ${
-                  activeAccountingTab === "trial-balance"
+                className={`px-4 py-2 font-medium ${activeAccountingTab === "trial-balance"
                     ? "border-b-2 border-indigo-600 text-indigo-600"
                     : "text-gray-600 hover:text-gray-800"
-                }`}
+                  }`}
               >
                 <Calculator className="inline mr-2" size={18} />
                 Trial Balance
               </button>
               <button
                 onClick={() => setActiveAccountingTab("auto-report")}
-                className={`px-4 py-2 font-medium ${
-                  activeAccountingTab === "auto-report"
+                className={`px-4 py-2 font-medium ${activeAccountingTab === "auto-report"
                     ? "border-b-2 border-indigo-600 text-indigo-600"
                     : "text-gray-600 hover:text-gray-800"
-                }`}
+                  }`}
               >
                 <TrendingUp className="inline mr-2" size={18} />
                 Automatic Reports
               </button>
               <button
                 onClick={() => setActiveAccountingTab("comprehensive-report")}
-                className={`px-4 py-2 font-medium ${
-                  activeAccountingTab === "comprehensive-report"
+                className={`px-4 py-2 font-medium ${activeAccountingTab === "comprehensive-report"
                     ? "border-b-2 border-indigo-600 text-indigo-600"
                     : "text-gray-600 hover:text-gray-800"
-                }`}
+                  }`}
               >
                 <FileText className="inline mr-2" size={18} />
                 Comprehensive Report
               </button>
               <button
                 onClick={() => setActiveAccountingTab("gst-reports")}
-                className={`px-4 py-2 font-medium ${
-                  activeAccountingTab === "gst-reports"
+                className={`px-4 py-2 font-medium ${activeAccountingTab === "gst-reports"
                     ? "border-b-2 border-indigo-600 text-indigo-600"
                     : "text-gray-600 hover:text-gray-800"
-                }`}
+                  }`}
               >
                 <Calculator className="inline mr-2" size={18} />
                 GST Reports
@@ -1241,11 +1233,10 @@ export default function ReportsDashboard() {
                       <div
                         key={group.id}
                         onClick={() => setSelectedGroup(group)}
-                        className={`p-3 rounded cursor-pointer ${
-                          selectedGroup?.id === group.id
+                        className={`p-3 rounded cursor-pointer ${selectedGroup?.id === group.id
                             ? "bg-indigo-100 border-2 border-indigo-600"
                             : "bg-gray-50 hover:bg-gray-100"
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center justify-between">
                           <div>
@@ -1407,8 +1398,8 @@ export default function ReportsDashboard() {
                           ...journalEntries.flatMap(entry => {
                             const rows = [];
                             const date = formatDateIST(entry.entry_date);
-                            const ref = entry.reference_type && entry.reference_id 
-                              ? `${entry.reference_type.toUpperCase()}-${entry.reference_id}` 
+                            const ref = entry.reference_type && entry.reference_id
+                              ? `${entry.reference_type.toUpperCase()}-${entry.reference_id}`
                               : '';
                             const mainRow = [date, entry.entry_number, entry.description, ref, '', ''].join(',');
                             rows.push(mainRow);
@@ -1472,7 +1463,7 @@ export default function ReportsDashboard() {
                             const totalCredit = entry.lines?.filter(l => l.credit_ledger_id).reduce((sum, l) => sum + l.amount, 0) || 0;
                             return (
                               <React.Fragment key={entry.id}>
-                                <tr 
+                                <tr
                                   className="border-b hover:bg-gray-50 cursor-pointer"
                                   onClick={() => {
                                     const newExpanded = new Set(expandedEntries);
@@ -1564,7 +1555,7 @@ export default function ReportsDashboard() {
                         </span>
                       </div>
                       <div className="text-gray-600">
-                        Total Debits: ₹{trialBalance.total_debits.toFixed(2)} | 
+                        Total Debits: ₹{trialBalance.total_debits.toFixed(2)} |
                         Total Credits: ₹{trialBalance.total_credits.toFixed(2)}
                       </div>
                     </div>
@@ -1652,19 +1643,16 @@ export default function ReportsDashboard() {
                           ₹{autoReport.summary?.total_expenses?.toFixed(2) || "0.00"}
                         </p>
                       </div>
-                      <div className={`rounded-lg p-4 border ${
-                        (autoReport.summary?.net_profit || 0) >= 0 
-                          ? "bg-blue-50 border-blue-200" 
+                      <div className={`rounded-lg p-4 border ${(autoReport.summary?.net_profit || 0) >= 0
+                          ? "bg-blue-50 border-blue-200"
                           : "bg-orange-50 border-orange-200"
-                      }`}>
-                        <h3 className={`text-sm font-medium mb-1 ${
-                          (autoReport.summary?.net_profit || 0) >= 0 ? "text-blue-800" : "text-orange-800"
                         }`}>
+                        <h3 className={`text-sm font-medium mb-1 ${(autoReport.summary?.net_profit || 0) >= 0 ? "text-blue-800" : "text-orange-800"
+                          }`}>
                           Net Profit
                         </h3>
-                        <p className={`text-2xl font-bold ${
-                          (autoReport.summary?.net_profit || 0) >= 0 ? "text-blue-600" : "text-orange-600"
-                        }`}>
+                        <p className={`text-2xl font-bold ${(autoReport.summary?.net_profit || 0) >= 0 ? "text-blue-600" : "text-orange-600"
+                          }`}>
                           ₹{autoReport.summary?.net_profit?.toFixed(2) || "0.00"}
                         </p>
                         <p className="text-xs text-gray-600 mt-1">
@@ -1771,21 +1759,21 @@ export default function ReportsDashboard() {
                       </div>
                     </div>
 
-                    {autoReport.expenses?.operating_expenses?.by_category && 
-                     Object.keys(autoReport.expenses.operating_expenses.by_category).length > 0 && (
-                      <div className="bg-white border rounded-lg p-4">
-                        <h4 className="font-semibold mb-2">Expenses by Category</h4>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                          {Object.entries(autoReport.expenses.operating_expenses.by_category).map(([category, data]) => (
-                            <div key={category} className="text-sm">
-                              <p className="font-medium">{category}</p>
-                              <p className="text-gray-600">₹{data.amount?.toFixed(2) || "0.00"}</p>
-                              <p className="text-xs text-gray-500">{data.count || 0} items</p>
-                            </div>
-                          ))}
+                    {autoReport.expenses?.operating_expenses?.by_category &&
+                      Object.keys(autoReport.expenses.operating_expenses.by_category).length > 0 && (
+                        <div className="bg-white border rounded-lg p-4">
+                          <h4 className="font-semibold mb-2">Expenses by Category</h4>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            {Object.entries(autoReport.expenses.operating_expenses.by_category).map(([category, data]) => (
+                              <div key={category} className="text-sm">
+                                <p className="font-medium">{category}</p>
+                                <p className="text-gray-600">₹{data.amount?.toFixed(2) || "0.00"}</p>
+                                <p className="text-xs text-gray-500">{data.count || 0} items</p>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
@@ -2315,81 +2303,73 @@ export default function ReportsDashboard() {
                 <div className="mb-6 flex flex-wrap gap-2 border-b pb-4">
                   <button
                     onClick={() => setGstReportType("master-summary")}
-                    className={`px-4 py-2 rounded ${
-                      gstReportType === "master-summary"
+                    className={`px-4 py-2 rounded ${gstReportType === "master-summary"
                         ? "bg-indigo-600 text-white"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
+                      }`}
                   >
                     Master Summary
                   </button>
                   <button
                     onClick={() => setGstReportType("b2b-sales")}
-                    className={`px-4 py-2 rounded ${
-                      gstReportType === "b2b-sales"
+                    className={`px-4 py-2 rounded ${gstReportType === "b2b-sales"
                         ? "bg-indigo-600 text-white"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
+                      }`}
                   >
                     B2B Sales
                   </button>
                   <button
                     onClick={() => setGstReportType("b2c-sales")}
-                    className={`px-4 py-2 rounded ${
-                      gstReportType === "b2c-sales"
+                    className={`px-4 py-2 rounded ${gstReportType === "b2c-sales"
                         ? "bg-indigo-600 text-white"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
+                      }`}
                   >
                     B2C Sales
                   </button>
                   <button
                     onClick={() => setGstReportType("hsn-sac-summary")}
-                    className={`px-4 py-2 rounded ${
-                      gstReportType === "hsn-sac-summary"
+                    className={`px-4 py-2 rounded ${gstReportType === "hsn-sac-summary"
                         ? "bg-indigo-600 text-white"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
+                      }`}
                   >
                     HSN/SAC Summary
                   </button>
                   <button
                     onClick={() => setGstReportType("itc-register")}
-                    className={`px-4 py-2 rounded ${
-                      gstReportType === "itc-register"
+                    className={`px-4 py-2 rounded ${gstReportType === "itc-register"
                         ? "bg-indigo-600 text-white"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
+                      }`}
                   >
                     ITC Register
                   </button>
                   <button
                     onClick={() => setGstReportType("rcm-register")}
-                    className={`px-4 py-2 rounded ${
-                      gstReportType === "rcm-register"
+                    className={`px-4 py-2 rounded ${gstReportType === "rcm-register"
                         ? "bg-indigo-600 text-white"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
+                      }`}
                   >
                     RCM Register
                   </button>
                   <button
                     onClick={() => setGstReportType("advance-receipt")}
-                    className={`px-4 py-2 rounded ${
-                      gstReportType === "advance-receipt"
+                    className={`px-4 py-2 rounded ${gstReportType === "advance-receipt"
                         ? "bg-indigo-600 text-white"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
+                      }`}
                   >
                     Advance Receipt
                   </button>
                   <button
                     onClick={() => setGstReportType("room-tariff-slab")}
-                    className={`px-4 py-2 rounded ${
-                      gstReportType === "room-tariff-slab"
+                    className={`px-4 py-2 rounded ${gstReportType === "room-tariff-slab"
                         ? "bg-indigo-600 text-white"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
+                      }`}
                   >
                     Room Tariff Slab
                   </button>
@@ -2598,7 +2578,7 @@ export default function ReportsDashboard() {
                           <div className="mb-4 p-4 bg-green-50 rounded border border-green-200">
                             <h3 className="text-lg font-bold mb-2">{gstReportData.b2c_small?.description || "B2C Small (Grouped by Place of Supply & Tax Rate)"}</h3>
                             <p className="text-sm text-green-800">
-                              All intra-state sales and inter-state sales below ₹2.5L are grouped by Place of Supply and Tax Rate. 
+                              All intra-state sales and inter-state sales below ₹2.5L are grouped by Place of Supply and Tax Rate.
                               Individual invoice numbers are NOT reported here.
                             </p>
                           </div>
@@ -2681,10 +2661,10 @@ export default function ReportsDashboard() {
                             </div>
                           </div>
                         )}
-                        
+
                         <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mb-4">
                           <p className="text-sm text-blue-800">
-                            <strong>Note:</strong> This report groups all sales by HSN/SAC code as required for GSTR-1 Table 12. 
+                            <strong>Note:</strong> This report groups all sales by HSN/SAC code as required for GSTR-1 Table 12.
                             Each row represents aggregated sales for a specific HSN/SAC code and tax rate.
                           </p>
                         </div>
@@ -2846,11 +2826,10 @@ export default function ReportsDashboard() {
                                     <td className="p-2 border">{item.item_name}</td>
                                     <td className="p-2 border text-xs">{item.category_name}</td>
                                     <td className="p-2 border">
-                                      <span className={`px-2 py-1 rounded text-xs ${
-                                        item.itc_type === "Capital Goods" ? "bg-purple-100 text-purple-800" :
-                                        item.itc_type === "Input Services" ? "bg-blue-100 text-blue-800" :
-                                        "bg-green-100 text-green-800"
-                                      }`}>
+                                      <span className={`px-2 py-1 rounded text-xs ${item.itc_type === "Capital Goods" ? "bg-purple-100 text-purple-800" :
+                                          item.itc_type === "Input Services" ? "bg-blue-100 text-blue-800" :
+                                            "bg-green-100 text-green-800"
+                                        }`}>
                                         {item.itc_type}
                                       </span>
                                     </td>
@@ -2943,16 +2922,16 @@ export default function ReportsDashboard() {
                               onChange={async (e) => {
                                 const file = e.target.files?.[0];
                                 if (!file) return;
-                                
+
                                 setGstr2bLoading(true);
                                 try {
                                   const formData = new FormData();
                                   formData.append("file", file);
-                                  
+
                                   const params = new URLSearchParams();
                                   if (gstStartDate) params.append("start_date", gstStartDate);
                                   if (gstEndDate) params.append("end_date", gstEndDate);
-                                  
+
                                   const response = await API.post(
                                     `/gst-reports/itc-register/reconcile-gstr2b?${params.toString()}`,
                                     formData,
@@ -2962,7 +2941,7 @@ export default function ReportsDashboard() {
                                       },
                                     }
                                   );
-                                  
+
                                   setGstr2bReconcileData(response.data);
                                 } catch (error) {
                                   console.error("GSTR-2B Reconciliation error:", error);
@@ -3127,32 +3106,83 @@ export default function ReportsDashboard() {
 
                     {/* RCM Register */}
                     {gstReportType === "rcm-register" && (
-                      <div>
-                        <div className="mb-4 p-4 bg-orange-50 rounded border border-orange-200">
-                          <p className="text-sm"><strong>Total RCM Liability:</strong> ₹{gstReportData.total_tax_liability?.toFixed(2) || "0.00"}</p>
+                      <div className="space-y-6">
+                        {/* Summary Cards */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+                            <h3 className="text-sm font-medium text-orange-800 mb-1">Total RCM Liability</h3>
+                            <p className="text-2xl font-bold text-orange-600">₹{gstReportData.summary?.total_tax_liability?.toFixed(2) || "0.00"}</p>
+                            <p className="text-xs text-gray-600 mt-1">To be paid in cash</p>
+                          </div>
+                          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                            <h3 className="text-sm font-medium text-blue-800 mb-1">Total Taxable Value</h3>
+                            <p className="text-2xl font-bold text-blue-600">₹{gstReportData.summary?.total_taxable_value?.toFixed(2) || "0.00"}</p>
+                          </div>
+                          <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                            <h3 className="text-sm font-medium text-green-800 mb-1">Total Records</h3>
+                            <p className="text-2xl font-bold text-green-600">{gstReportData.summary?.total_records || 0}</p>
+                          </div>
+                          <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                            <h3 className="text-sm font-medium text-purple-800 mb-1">Total IGST</h3>
+                            <p className="text-2xl font-bold text-purple-600">₹{gstReportData.summary?.total_igst?.toFixed(2) || "0.00"}</p>
+                          </div>
                         </div>
+
+                        <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+                          <p className="text-sm text-orange-800">
+                            <strong>Note:</strong> Reverse Charge Mechanism (RCM) liability arises on specific goods/services (like GTA, Legal Services) or purchases from unregistered dealers.
+                            This liability must be paid in cash, but ITC can be claimed in the same month.
+                          </p>
+                        </div>
+
                         <div className="overflow-x-auto">
-                          <table className="min-w-full text-sm border">
+                          <table className="min-w-full text-xs border">
                             <thead>
                               <tr className="bg-gray-100">
-                                <th className="p-2 border text-left">Vendor</th>
-                                <th className="p-2 border text-left">Invoice No</th>
-                                <th className="p-2 border text-left">HSN</th>
+                                <th className="p-2 border text-left">RCM Invoice No</th>
+                                <th className="p-2 border text-left">RCM Date</th>
+                                <th className="p-2 border text-left">Supplier Name</th>
+                                <th className="p-2 border text-left">Nature of Supply</th>
                                 <th className="p-2 border text-right">Taxable Value</th>
-                                <th className="p-2 border text-right">Total Tax</th>
+                                <th className="p-2 border text-right">Tax Rate</th>
+                                <th className="p-2 border text-right">Tax Liability</th>
+                                <th className="p-2 border text-left">ITC Eligibility</th>
+                                <th className="p-2 border text-left">Source</th>
                               </tr>
                             </thead>
                             <tbody>
                               {gstReportData.data?.map((item, idx) => (
-                                <tr key={idx}>
-                                  <td className="p-2 border">{item.vendor_name}</td>
-                                  <td className="p-2 border">{item.invoice_number}</td>
-                                  <td className="p-2 border">{item.hsn_code || "-"}</td>
+                                <tr key={idx} className="hover:bg-gray-50">
+                                  <td className="p-2 border font-mono text-xs">{item.rcm_invoice_no}</td>
+                                  <td className="p-2 border">{item.rcm_date?.split('T')[0]}</td>
+                                  <td className="p-2 border">{item.supplier_name}</td>
+                                  <td className="p-2 border">{item.nature_of_supply}</td>
                                   <td className="p-2 border text-right">₹{item.taxable_value?.toFixed(2)}</td>
-                                  <td className="p-2 border text-right">₹{item.total_tax?.toFixed(2)}</td>
+                                  <td className="p-2 border text-right">{item.tax_rate}%</td>
+                                  <td className="p-2 border text-right font-bold text-orange-600">₹{item.tax_liability?.toFixed(2)}</td>
+                                  <td className="p-2 border">
+                                    <span className={`px-2 py-1 rounded text-xs ${item.itc_eligibility === "Eligible" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                      }`}>
+                                      {item.itc_eligibility}
+                                    </span>
+                                  </td>
+                                  <td className="p-2 border text-xs text-gray-500">
+                                    {item.source_type} #{item.source_id}
+                                  </td>
                                 </tr>
                               ))}
                             </tbody>
+                            {gstReportData.data && gstReportData.data.length > 0 && (
+                              <tfoot className="bg-gray-100 font-bold">
+                                <tr>
+                                  <td colSpan="4" className="p-2 border text-right">Totals:</td>
+                                  <td className="p-2 border text-right">₹{gstReportData.summary?.total_taxable_value?.toFixed(2)}</td>
+                                  <td className="p-2 border"></td>
+                                  <td className="p-2 border text-right text-orange-600">₹{gstReportData.summary?.total_tax_liability?.toFixed(2)}</td>
+                                  <td colSpan="2" className="p-2 border"></td>
+                                </tr>
+                              </tfoot>
+                            )}
                           </table>
                         </div>
                       </div>
@@ -3729,8 +3759,7 @@ export default function ReportsDashboard() {
                         .reduce((sum, line) => sum + (parseFloat(line.amount) || 0), 0);
                       return Math.abs(totalDebits - totalCredits) >= 0.01;
                     })()}
-                    className={`flex-1 px-4 py-2 rounded ${
-                      (() => {
+                    className={`flex-1 px-4 py-2 rounded ${(() => {
                         const totalDebits = journalForm.lines
                           .filter(line => line.debit_ledger_id)
                           .reduce((sum, line) => sum + (parseFloat(line.amount) || 0), 0);
@@ -3741,7 +3770,7 @@ export default function ReportsDashboard() {
                           ? "bg-gray-400 text-gray-600 cursor-not-allowed"
                           : "bg-indigo-600 text-white hover:bg-indigo-700";
                       })()
-                    }`}
+                      }`}
                   >
                     Create Entry
                   </button>

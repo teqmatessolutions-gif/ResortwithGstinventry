@@ -239,6 +239,13 @@ export default function ComprehensiveReport() {
       { id: 'staff-attendance', name: 'Staff Attendance', icon: UserCheck, endpoint: '/reports/hr/staff-attendance' },
       { id: 'payroll-register', name: 'Payroll Register', icon: CreditCard, endpoint: '/reports/hr/payroll-register' },
     ],
+    'gst': [
+      { id: 'master-gst-summary', name: 'Master GST Summary', icon: BarChart3, endpoint: '/gst-reports/master-summary' },
+      { id: 'gstr-1-sales', name: 'Sales (GSTR-1)', icon: TrendingUp, endpoint: '/gst-reports/b2b-sales' },
+      { id: 'itc-register', name: 'Purchases (ITC Register)', icon: ShoppingCart, endpoint: '/gst-reports/itc-register' },
+      { id: 'rcm-register', name: 'RCM Register', icon: Receipt, endpoint: '/gst-reports/rcm-register' },
+      // Note: GSTR-2B Reconciliation requires file upload - available in Account.jsx GST Reports section
+    ],
   };
 
   const departmentTabs = [
@@ -247,6 +254,7 @@ export default function ComprehensiveReport() {
     { id: 'inventory', name: 'Inventory & Purchase', icon: Package, color: 'purple' },
     { id: 'housekeeping', name: 'Housekeeping & Facility', icon: Home, color: 'green' },
     { id: 'security-hr', name: 'Security & HR', icon: Shield, color: 'red' },
+    { id: 'gst', name: 'GST Reports', icon: FileText, color: 'indigo' },
   ];
 
   // Fetch report data
@@ -780,8 +788,8 @@ export default function ComprehensiveReport() {
                     </td>
                     <td className="p-3">
                       <span className={`px-2 py-1 text-xs rounded-full ${item.recipient_type === 'Staff' ? 'bg-blue-100 text-blue-800' :
-                          item.recipient_type === 'Staff/Owner' ? 'bg-purple-100 text-purple-800' :
-                            'bg-green-100 text-green-800'
+                        item.recipient_type === 'Staff/Owner' ? 'bg-purple-100 text-purple-800' :
+                          'bg-green-100 text-green-800'
                         }`}>
                         {item.recipient_type}
                       </span>
@@ -907,8 +915,8 @@ export default function ComprehensiveReport() {
                     <td className="p-3">{item.duration_days ? `${item.duration_days} days` : '-'}</td>
                     <td className="p-3">
                       <span className={`px-2 py-1 text-xs rounded-full ${item.booking_type === 'Package' ? 'bg-purple-100 text-purple-800' :
-                          item.booking_type === 'Service Request' ? 'bg-blue-100 text-blue-800' :
-                            'bg-green-100 text-green-800'
+                        item.booking_type === 'Service Request' ? 'bg-blue-100 text-blue-800' :
+                          'bg-green-100 text-green-800'
                         }`}>
                         {item.booking_type || 'Regular'}
                       </span>
@@ -1126,8 +1134,8 @@ export default function ComprehensiveReport() {
                     </td>
                     <td className="p-3">
                       <span className={`px-2 py-1 text-xs rounded-full ${item.status === 'claimed' ? 'bg-green-100 text-green-800' :
-                          item.status === 'disposed' ? 'bg-gray-100 text-gray-800' :
-                            'bg-yellow-100 text-yellow-800'
+                        item.status === 'disposed' ? 'bg-gray-100 text-gray-800' :
+                          'bg-yellow-100 text-yellow-800'
                         }`}>
                         {item.status || 'found'}
                       </span>
@@ -1326,6 +1334,167 @@ export default function ComprehensiveReport() {
           </div>
         );
 
+      case 'master-gst-summary':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <SectionCard title="Output Tax Liability" icon={<TrendingUp className="text-red-600" />}>
+                <div className="space-y-4">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Total Sales:</span>
+                    <span className="font-semibold">{formatCurrency(data.output_tax?.total_taxable_value || 0)}</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-2">
+                    <span className="text-gray-800 font-bold">Total Output Tax:</span>
+                    <span className="text-red-600 font-bold text-lg">{formatCurrency(data.output_tax?.total_tax || 0)}</span>
+                  </div>
+                </div>
+              </SectionCard>
+
+              <SectionCard title="Input Tax Credit (ITC)" icon={<ShoppingCart className="text-green-600" />}>
+                <div className="space-y-4">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Total Purchases:</span>
+                    <span className="font-semibold">{formatCurrency(data.input_tax_credit?.total_taxable_value || 0)}</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-2">
+                    <span className="text-gray-800 font-bold">Total Eligible ITC:</span>
+                    <span className="text-green-600 font-bold text-lg">{formatCurrency(data.input_tax_credit?.eligible_itc || 0)}</span>
+                  </div>
+                </div>
+              </SectionCard>
+
+              <SectionCard title="Net GST Payable" icon={<DollarSign className="text-blue-600" />}>
+                <div className="space-y-4">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Output Tax:</span>
+                    <span className="text-red-600">{formatCurrency(data.output_tax?.total_tax || 0)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Less: ITC Available:</span>
+                    <span className="text-green-600">({formatCurrency(data.input_tax_credit?.eligible_itc || 0)})</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-2">
+                    <span className="text-gray-800 font-bold">Net Payable (Cash):</span>
+                    <span className="text-blue-600 font-bold text-lg">{formatCurrency(data.net_payable || 0)}</span>
+                  </div>
+                </div>
+              </SectionCard>
+            </div>
+          </div>
+        );
+
+      case 'rcm-register':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+                <h3 className="text-sm font-medium text-orange-800 mb-1">Total RCM Liability</h3>
+                <p className="text-2xl font-bold text-orange-600">{formatCurrency(data.summary?.total_tax_liability || 0)}</p>
+                <p className="text-xs text-gray-600 mt-1">To be paid in cash</p>
+              </div>
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <h3 className="text-sm font-medium text-blue-800 mb-1">Total Taxable Value</h3>
+                <p className="text-2xl font-bold text-blue-600">{formatCurrency(data.summary?.total_taxable_value || 0)}</p>
+              </div>
+              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                <h3 className="text-sm font-medium text-green-800 mb-1">Total Records</h3>
+                <p className="text-2xl font-bold text-green-600">{data.summary?.total_records || 0}</p>
+              </div>
+              <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                <h3 className="text-sm font-medium text-purple-800 mb-1">Total IGST</h3>
+                <p className="text-2xl font-bold text-purple-600">{formatCurrency(data.summary?.total_igst || 0)}</p>
+              </div>
+            </div>
+
+            <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+              <p className="text-sm text-orange-800">
+                <strong>Note:</strong> Reverse Charge Mechanism (RCM) liability arises on specific goods/services (like GTA, Legal Services) or purchases from unregistered dealers.
+                This liability must be paid in cash, but ITC can be claimed in the same month.
+              </p>
+            </div>
+
+            <SectionCard title="RCM Register" icon={<Receipt className="text-orange-600" />} loading={loading} count={data.summary?.total_records}>
+              <DataTable
+                headers={["RCM Invoice No", "RCM Date", "Supplier Name", "Nature of Supply", "Taxable Value", "Tax Rate", "Tax Liability", "ITC Eligibility", "Source"]}
+                data={data.data || []}
+                emptyMessage="No RCM transactions found"
+                renderRow={(item, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50">
+                    <td className="p-3 font-mono text-sm">{item.rcm_invoice_no}</td>
+                    <td className="p-3">{item.rcm_date?.split('T')[0]}</td>
+                    <td className="p-3">{item.supplier_name}</td>
+                    <td className="p-3">{item.nature_of_supply}</td>
+                    <td className="p-3 text-right">{formatCurrency(item.taxable_value)}</td>
+                    <td className="p-3 text-right">{item.tax_rate}%</td>
+                    <td className="p-3 text-right font-bold text-orange-600">{formatCurrency(item.tax_liability)}</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-1 text-xs rounded-full ${item.itc_eligibility === "Eligible" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                        }`}>
+                        {item.itc_eligibility}
+                      </span>
+                    </td>
+                    <td className="p-3 text-xs text-gray-500">
+                      {item.source_type} #{item.source_id}
+                    </td>
+                  </tr>
+                )}
+              />
+            </SectionCard>
+          </div>
+        );
+
+      case 'itc-register':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                <h3 className="text-sm font-medium text-green-800 mb-1">Total Eligible ITC</h3>
+                <p className="text-2xl font-bold text-green-600">{formatCurrency(data.summary?.total_eligible_itc || 0)}</p>
+              </div>
+              <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                <h3 className="text-sm font-medium text-red-800 mb-1">Ineligible ITC</h3>
+                <p className="text-2xl font-bold text-red-600">{formatCurrency(data.summary?.total_ineligible_itc || 0)}</p>
+              </div>
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <h3 className="text-sm font-medium text-blue-800 mb-1">Total Purchases</h3>
+                <p className="text-2xl font-bold text-blue-600">{formatCurrency(data.summary?.total_taxable_value || 0)}</p>
+              </div>
+              <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                <h3 className="text-sm font-medium text-purple-800 mb-1">Total Tax Paid</h3>
+                <p className="text-2xl font-bold text-purple-600">{formatCurrency(data.summary?.total_tax_paid || 0)}</p>
+              </div>
+            </div>
+
+            <SectionCard title="ITC Register (Purchases)" icon={<ShoppingCart className="text-green-600" />} loading={loading} count={data.summary?.total_records}>
+              <DataTable
+                headers={["Invoice No", "Date", "Vendor", "GSTIN", "Taxable Value", "IGST", "CGST", "SGST", "Total Tax", "Eligibility"]}
+                data={data.data || []}
+                emptyMessage="No purchase records found"
+                renderRow={(item, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50">
+                    <td className="p-3 font-mono text-sm">{item.invoice_number}</td>
+                    <td className="p-3">{item.invoice_date?.split('T')[0]}</td>
+                    <td className="p-3">{item.vendor_name}</td>
+                    <td className="p-3 text-xs">{item.vendor_gstin || '-'}</td>
+                    <td className="p-3 text-right">{formatCurrency(item.taxable_value)}</td>
+                    <td className="p-3 text-right">{formatCurrency(item.igst)}</td>
+                    <td className="p-3 text-right">{formatCurrency(item.cgst)}</td>
+                    <td className="p-3 text-right">{formatCurrency(item.sgst)}</td>
+                    <td className="p-3 text-right font-bold">{formatCurrency(item.total_tax)}</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-1 text-xs rounded-full ${item.eligibility === "Eligible" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                        }`}>
+                        {item.eligibility}
+                      </span>
+                    </td>
+                  </tr>
+                )}
+              />
+            </SectionCard>
+          </div>
+        );
+
       default:
         // Generic table renderer for other reports
         const dataKeys = Object.keys(data || {});
@@ -1445,7 +1614,7 @@ export default function ComprehensiveReport() {
                 </motion.div>
               ))}
             </div>
-            )}
+
           </div>
         ) : (
           // Report detail view
