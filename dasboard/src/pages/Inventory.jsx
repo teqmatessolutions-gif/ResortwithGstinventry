@@ -646,6 +646,18 @@ const Inventory = () => {
       } else if (activeTab === "location-stock") {
         const res = await API.get("/inventory/stock-by-location");
         setLocationStock(res.data || []);
+
+        // Refresh details if a location is selected (e.g. modal is open)
+        if (selectedLocationStock) {
+          try {
+            const detailsRes = await API.get(
+              `/inventory/locations/${selectedLocationStock}/items`,
+            );
+            setLocationStockDetails(detailsRes.data);
+          } catch (error) {
+            console.error("Error refreshing location details:", error);
+          }
+        }
       } else if (activeTab === "recipe") {
         try {
           console.log(
@@ -698,7 +710,7 @@ const Inventory = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, categories.length, vendors.length, locations.length]);
+  }, [activeTab, categories.length, vendors.length, locations.length, selectedLocationStock]);
 
   // Summary calculations
   const summary = {
