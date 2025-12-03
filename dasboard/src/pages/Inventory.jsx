@@ -5811,13 +5811,13 @@ const PurchaseFormModal = ({
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </td>
-                        <td className="px-2 py-2">
+                        <td className="px-3 py-3">
                           <select
                             value={detail.item_id}
                             onChange={(e) =>
                               handleItemSelect(index, e.target.value)
                             }
-                            className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500"
+                            className="w-full px-3 py-2 text-sm font-semibold border-2 border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
                             required
                           >
                             <option value="">Select Item</option>
