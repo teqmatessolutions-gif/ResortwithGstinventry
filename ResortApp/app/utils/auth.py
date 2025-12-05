@@ -70,39 +70,51 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
+        # Debug Logging
+        # print(f"[AUTH DEBUG] Verifying token: {token[:10]}...")
+        
         # Check if token is None or empty
         if not token:
+            print("[AUTH DEBUG] Token is missing")
             raise credentials_exception
         
         payload = decode_token(token)
+        # print(f"[AUTH DEBUG] Decoded payload: {payload}")
+        
         user_id: int = payload.get("user_id")
         if user_id is None:
+            print("[AUTH DEBUG] user_id missing in payload")
             raise credentials_exception
+            
     except HTTPException:
-        # Re-raise HTTP exceptions (like 401/403 from OAuth2PasswordBearer)
         raise
-    except JWTError:
+    except JWTError as e:
+        print(f"[AUTH DEBUG] JWT Error: {e}")
         raise credentials_exception
     except Exception as e:
-        # Catch any other exceptions during token decoding
         import traceback
-        print(f"ERROR in get_current_user (token decode): {str(e)}\n{traceback.format_exc()}")
+        print(f"[AUTH DEBUG] Token Decode Error: {str(e)}\n{traceback.format_exc()}")
         raise credentials_exception
+
     try:
         user = db.query(User).options(joinedload(User.role)).filter(User.id == user_id).first()
         if user is None:
+            print(f"[AUTH DEBUG] User ID {user_id} not found in database")
             raise credentials_exception
+            
         if user.role is None:
+            print(f"[AUTH DEBUG] User {user_id} has no role assigned")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="User role not found. Please contact administrator."
             )
+            
+        # print(f"[AUTH DEBUG] User verified: {user.email}")
         return user
+        
     except HTTPException:
-        # Re-raise HTTP exceptions
         raise
     except Exception as e:
-        # Catch any database errors
         import traceback
-        print(f"ERROR in get_current_user (database query): {str(e)}\n{traceback.format_exc()}")
+        print(f"[AUTH DEBUG] DB Error during auth: {str(e)}\n{traceback.format_exc()}")
         raise credentials_exception

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, X, CheckCircle, AlertCircle, Info, Package, ShoppingCart, Calendar, Wrench, DollarSign, UtensilsCrossed } from 'lucide-react';
 import api from '../services/api';
 
@@ -162,8 +163,54 @@ const NotificationPanel = () => {
         deleteNotification,
         clearAll,
     } = useNotifications();
+    
+    const navigate = useNavigate();
 
     if (!showPanel) return null;
+
+    const handleNotificationClick = (notification) => {
+        // Mark as read
+        if (!notification.is_read) {
+            markAsRead(notification.id);
+        }
+        
+        // Close panel
+        setShowPanel(false);
+
+        // Determine navigation path
+        const type = notification.entity_type || notification.type;
+        // const id = notification.entity_id; // Can be used for detailed view if routes support it
+
+        switch (type) {
+            case 'booking':
+                navigate('/bookings');
+                break;
+            case 'service':
+            case 'service_request':
+                navigate('/services');
+                break;
+            case 'food_order':
+                navigate('/food-orders');
+                break;
+            case 'inventory':
+            case 'stock_low':
+                navigate('/inventory');
+                break;
+            case 'expense':
+                navigate('/expenses');
+                break;
+            case 'package':
+                navigate('/packages');
+                break;
+            case 'employee':
+                navigate('/employee-management');
+                break;
+            default:
+                // For generic info or unknown types, stay on current page or go to dashboard
+                // navigate('/dashboard'); 
+                break;
+        }
+    };
 
     return (
         <div className="fixed inset-0 z-50 overflow-hidden pointer-events-none">
@@ -225,6 +272,7 @@ const NotificationPanel = () => {
                                     notification={notification}
                                     onMarkAsRead={markAsRead}
                                     onDelete={deleteNotification}
+                                    onClick={() => handleNotificationClick(notification)}
                                 />
                             ))}
                         </div>
@@ -236,7 +284,7 @@ const NotificationPanel = () => {
 };
 
 // Individual Notification Item
-const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
+const NotificationItem = ({ notification, onMarkAsRead, onDelete, onClick }) => {
     const Icon = getNotificationIcon(notification.type);
     const colorClass = getNotificationColor(notification.type);
 
@@ -257,7 +305,8 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
 
     return (
         <div
-            className={`p-4 hover:bg-gray-50 transition-colors ${!notification.is_read ? 'bg-blue-50' : ''
+            onClick={onClick}
+            className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${!notification.is_read ? 'bg-blue-50' : ''
                 }`}
         >
             <div className="flex gap-3">
@@ -285,15 +334,15 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
                         </span>
                         {!notification.is_read && (
                             <button
-                                onClick={() => onMarkAsRead(notification.id)}
+                                onClick={(e) => { e.stopPropagation(); onMarkAsRead(notification.id); }}
                                 className="text-xs text-blue-600 hover:text-blue-800 font-medium"
                             >
                                 Mark as read
                             </button>
                         )}
                         <button
-                            onClick={() => onDelete(notification.id)}
-                            className="text-xs text-red-600 hover:text-red-800 font-medium"
+                            onClick={(e) => { e.stopPropagation(); onDelete(notification.id); }}
+                            className="text-xs text-red-600 hover:text-red-800 font-medium z-10"
                         >
                             Delete
                         </button>

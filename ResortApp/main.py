@@ -10,6 +10,10 @@ from pathlib import Path
 import os
 import traceback
 from time import time
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Import all API routers
 from app.api import (
