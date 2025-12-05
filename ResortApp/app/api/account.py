@@ -221,7 +221,7 @@ def get_journal_entry(
 @router.get("/trial-balance", response_model=TrialBalance)
 def get_trial_balance(
     as_on_date: Optional[datetime] = Query(None),
-    automatic: bool = Query(True, description="Automatically calculate from all business transactions"),
+    automatic: bool = Query(False, description="Automatically calculate from all business transactions"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

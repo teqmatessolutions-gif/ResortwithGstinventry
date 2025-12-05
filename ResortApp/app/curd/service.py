@@ -479,6 +479,23 @@ def create_assigned_service(db: Session, assigned: AssignedServiceCreate):
                         db.add(transaction)
                         print(f"[DEBUG] Created inventory transaction for {item.name}")
                         
+                        # Create COGS Journal Entry
+                        try:
+                            db.flush()  # Get transaction ID
+                            from app.utils.accounting_helpers import create_consumption_journal_entry
+                            cogs_val = quantity * (item.unit_price or 0.0)
+                            if cogs_val > 0:
+                                create_consumption_journal_entry(
+                                    db=db,
+                                    consumption_id=transaction.id,
+                                    cogs_amount=cogs_val,
+                                    inventory_item_name=item.name,
+                                    created_by=None
+                                )
+                                print(f"[DEBUG] Created COGS Journal Entry for {item.name}")
+                        except Exception as je_error:
+                            print(f"[WARNING] Failed to create COGS journal entry: {je_error}")
+                        
                         # Create employee inventory assignment if model exists
                         if has_emp_inv_model and EmployeeInventoryAssignment:
                             emp_inv_assignment = EmployeeInventoryAssignment(

@@ -2210,7 +2210,8 @@ def process_booking_checkout(room_number: str, request: CheckoutRequest, db: Ses
                     room_number=new_checkout.room_number or room_number,
                     gst_rate=18.0,  # Default, can be calculated from tax_amount
                     payment_method=payment_method,
-                    created_by=current_user.id if current_user else None
+                    created_by=current_user.id if current_user else None,
+                    advance_amount=float(new_checkout.advance_deposit or 0)
                 )
             except Exception as journal_error:
                 # Log error but don't fail checkout
@@ -2681,7 +2682,8 @@ def process_booking_checkout(room_number: str, request: CheckoutRequest, db: Ses
                         room_number=room_number,  # Primary room number
                         gst_rate=18.0,
                         payment_method=payment_method,
-                        created_by=current_user.id if current_user else None
+                        created_by=current_user.id if current_user else None,
+                        advance_amount=float(new_checkout.advance_deposit or 0)
                     )
                     if result is None:
                         print(f"[INFO] Journal entry not created for checkout {new_checkout.id} (ledgers may not be set up yet)")

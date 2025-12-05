@@ -124,6 +124,22 @@ async def create_expense(
             import traceback
             print(f"Warning: Could not create RCM journal entry for expense {created.id}: {str(e)}\n{traceback.format_exc()}")
 
+            print(f"Warning: Could not create RCM journal entry for expense {created.id}: {str(e)}\n{traceback.format_exc()}")
+
+    # Create Standard Expense Journal Entry (Debit Expense, Credit Cash/Bank)
+    try:
+        from app.utils.accounting_helpers import create_expense_journal_entry
+        create_expense_journal_entry(
+            db=db,
+            expense_id=created.id,
+            amount=float(amount),
+            category=category,
+            description=description or "",
+            created_by=current_user.id
+        )
+    except Exception as je_error:
+        print(f"Warning: Failed to create expense journal entry: {je_error}")
+
     # Add employee name in the response
     employee = db.query(Employee).filter(Employee.id == employee_id).first()
     return {

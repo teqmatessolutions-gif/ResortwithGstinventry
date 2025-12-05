@@ -340,10 +340,20 @@ def get_trial_balance(db: Session, as_on_date: Optional[datetime] = None, automa
         balance_data = get_ledger_balance(db, ledger.id, as_on_date)
         ledger_balances.append(balance_data)
         
-        if balance_data["balance"] > 0:
-            total_debits += balance_data["balance"]
-        else:
-            total_credits += abs(balance_data["balance"])
+        # Correct logic: Check ledger type
+        balance = balance_data["balance"]
+        balance_type = balance_data["balance_type"]
+        
+        if balance_type == "debit":
+            if balance >= 0:
+                total_debits += balance
+            else:
+                total_credits += abs(balance)
+        else:  # credit type
+            if balance >= 0:
+                total_credits += balance
+            else:
+                total_debits += abs(balance)
     
     return {
         "ledgers": ledger_balances,

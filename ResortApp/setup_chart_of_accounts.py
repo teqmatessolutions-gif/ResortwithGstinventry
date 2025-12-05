@@ -51,6 +51,7 @@ ledgers = [
     
     # Liabilities
     {"name": "Accounts Payable (Vendor)", "code": "AP001", "module": "Purchase", "opening_balance": 0, "balance_type": "credit"},
+    {"name": "Advance from Customers", "code": "ADV001", "module": "Booking", "opening_balance": 0, "balance_type": "credit"},
     
     # Tax Ledgers (Assets for Input Tax, Liabilities for Output Tax)
     {"name": "Input CGST", "code": "TAX001", "module": "Tax", "opening_balance": 0, "balance_type": "debit"},

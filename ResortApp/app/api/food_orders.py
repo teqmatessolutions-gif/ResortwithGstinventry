@@ -91,6 +91,32 @@ def mark_order_paid(
     db.commit()
     db.refresh(order)
     
+    # Automatically create journal entry for food revenue
+    try:
+        from app.utils.accounting_helpers import create_food_order_journal_entry
+        
+        # Determine room number if available
+        room_number = "Unknown"
+        if order.room_id:
+            from app.models.room import Room
+            room = db.query(Room).filter(Room.id == order.room_id).first()
+            if room:
+                room_number = room.number
+        
+        create_food_order_journal_entry(
+            db=db,
+            food_order_id=order.id,
+            amount=total_with_gst,
+            room_number=room_number,
+            gst_rate=5.0,
+            created_by=current_user.id
+        )
+    except Exception as e:
+        # Log error but don't fail the request
+        import traceback
+        print(f"Failed to create journal entry for food order {order.id}: {str(e)}")
+        print(traceback.format_exc())
+
     return {
         "message": "Order marked as paid successfully",
         "order_id": order.id,
