@@ -5,9 +5,9 @@ After=network.target
 [Service]
 User=root
 Group=root
-WorkingDirectory=/var/www/inventory/ResortApp
-Environment="PATH=/var/www/inventory/venv/bin"
-EnvironmentFile=/var/www/inventory/ResortApp/.env
+# EnvironmentFile=/var/www/inventory/ResortApp/.env
+# Manually setting essential env vars if file is missing
+Environment=PYTHONPATH=/var/www/inventory/ResortApp
 ExecStart=/var/www/inventory/venv/bin/gunicorn main:app -c gunicorn_inventory.conf.py
 Restart=always
 RestartSec=10

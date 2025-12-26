@@ -108,8 +108,18 @@ fi
 # Ensure gunicorn and uvicorn are installed
 sudo -u $USER $APP_DIR/venv/bin/pip install gunicorn uvicorn
 
-# 5. Permissions
-echo "[5/7] Setting Permissions..."
+# 5. Permissions & Env
+echo "[5/7] Setting Permissions & Env..."
+
+# Ensure .env exists to prevent service failure
+if [ ! -f "$REPO_DIR/.env" ]; then
+    echo "Creating default .env file..."
+    # You might want to populate this with actual defaults
+    echo "DATABASE_URL=sqlite:///./orchid.db" > $REPO_DIR/.env
+    echo "SECRET_KEY=change_this_secret_key" >> $REPO_DIR/.env
+    sudo chown $USER:$GROUP $REPO_DIR/.env
+fi
+
 sudo chown -R $USER:$GROUP $APP_DIR
 # Ensure directories are executable (traversable)
 sudo find $APP_DIR -type d -exec chmod 755 {} \;
