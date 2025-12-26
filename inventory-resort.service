@@ -1,0 +1,16 @@
+[Unit]
+Description=Inventory Resort Management System - TeqMates
+After=network.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory=/var/www/inventory/ResortApp
+Environment="PATH=/var/www/inventory/venv/bin"
+EnvironmentFile=/var/www/inventory/ResortApp/.env
+ExecStart=/var/www/inventory/venv/bin/gunicorn main:app -c gunicorn_inventory.conf.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
