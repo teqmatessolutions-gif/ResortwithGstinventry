@@ -39,6 +39,9 @@ const getRouterBasename = () => {
   if (path.startsWith("/pommaadmin")) {
     return "/pommaadmin";
   }
+  if (path.startsWith("/inventory")) {
+    return "/inventory";
+  }
   // For local development without path prefix, use empty basename
   const hostname = window.location.hostname || "";
   if (hostname === "localhost" || hostname === "127.0.0.1" || hostname.startsWith("192.168.") || hostname.startsWith("10.")) {

@@ -14,6 +14,14 @@ export const isOrchidDeployment = () => {
   return path.startsWith("/orchidadmin") || path.startsWith("/orchid");
 };
 
+export const isInventoryDeployment = () => {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  const path = window.location.pathname || "";
+  return path.startsWith("/inventory");
+};
+
 export const getMediaBaseUrl = () => {
   // For local development (localhost or 127.0.0.1 or LAN IP), always use port 8000 for Orchid
   if (typeof window !== "undefined") {
@@ -29,6 +37,9 @@ export const getMediaBaseUrl = () => {
   }
   if (typeof window !== "undefined" && isPommaDeployment()) {
     return `${window.location.origin}/pomma`;
+  }
+  if (typeof window !== "undefined" && isInventoryDeployment()) {
+    return `${window.location.origin}/inventory/uploads`;
   }
   if (process.env.REACT_APP_MEDIA_BASE_URL) {
     return process.env.REACT_APP_MEDIA_BASE_URL;
@@ -76,6 +87,11 @@ export const getApiBaseUrl = () => {
   if (typeof window !== "undefined" && isPommaDeployment()) {
     const apiUrl = `${window.location.origin}/pommaapi/api`;
     console.log("Using Pomma deployment API URL:", apiUrl);
+    return apiUrl;
+  }
+  if (typeof window !== "undefined" && isInventoryDeployment()) {
+    const apiUrl = `${window.location.origin}/inventoryapi/api`;
+    console.log("Using Inventory deployment API URL:", apiUrl);
     return apiUrl;
   }
   // Sensible defaults
