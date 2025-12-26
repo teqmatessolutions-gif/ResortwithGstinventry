@@ -61,7 +61,20 @@ elif [ -d "dasboard" ]; then
     
     # Copy build artifacts
     echo "Copying build artifacts..."
+    # Ensure target is clean
+    sudo rm -rf $FRONTEND_DIR/*
     sudo cp -r build/* $FRONTEND_DIR/
+    
+    # VERIFICATION
+    if [ ! -f "$FRONTEND_DIR/index.html" ]; then
+        echo "CRITICAL ERROR: index.html not found in $FRONTEND_DIR after copy!"
+        echo "Build directory contents:"
+        ls -la build/
+        exit 1
+    else
+        echo "SUCCESS: index.html found."
+    fi
+    
     cd ..
 else
     echo "WARNING: No frontend source or build found."
@@ -98,7 +111,11 @@ sudo -u $USER $APP_DIR/venv/bin/pip install gunicorn uvicorn
 # 5. Permissions
 echo "[5/7] Setting Permissions..."
 sudo chown -R $USER:$GROUP $APP_DIR
-sudo chmod -R 755 $APP_DIR
+# Ensure directories are executable (traversable)
+sudo find $APP_DIR -type d -exec chmod 755 {} \;
+# Ensure files are readable
+sudo find $APP_DIR -type f -exec chmod 644 {} \;
+
 # Ensure uploads directory is writable
 sudo mkdir -p $REPO_DIR/uploads
 sudo chown -R $USER:$GROUP $REPO_DIR/uploads
