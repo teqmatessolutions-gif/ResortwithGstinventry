@@ -290,14 +290,14 @@ else:
     print("[ERROR] Inventory router not imported, skipping registration")
 
 # Include stock reconciliation router
-try:
-    from app.api import stock_reconciliation
-    app.include_router(stock_reconciliation.router, prefix="/api", tags=["Stock Reconciliation"])
-    print(f"[OK] Stock reconciliation router registered with {len(stock_reconciliation.router.routes)} routes")
-except Exception as e:
-    print(f"[ERROR] ERROR importing/registering stock reconciliation router: {e}")
-    import traceback
-    traceback.print_exc()
+# try:
+#     from app.api import stock_reconciliation
+#     app.include_router(stock_reconciliation.router, prefix="/api", tags=["Stock Reconciliation"])
+#     print(f"[OK] Stock reconciliation router registered with {len(stock_reconciliation.router.routes)} routes")
+# except Exception as e:
+#     print(f"[ERROR] ERROR importing/registering stock reconciliation router: {e}")
+#     import traceback
+#     traceback.print_exc()
 
 
 # Root route - Landing Page
