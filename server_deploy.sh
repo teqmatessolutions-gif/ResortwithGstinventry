@@ -105,8 +105,10 @@ sudo -u $USER $APP_DIR/venv/bin/pip install --upgrade pip
 if [ -f "$REPO_DIR/requirements.txt" ]; then
     sudo -u $USER $APP_DIR/venv/bin/pip install -r $REPO_DIR/requirements.txt
 fi
-# Ensure gunicorn and uvicorn are installed
-sudo -u $USER $APP_DIR/venv/bin/pip install gunicorn uvicorn
+# Ensure pip is up to date and install dependencies
+sudo -u $USER $APP_DIR/venv/bin/pip install --upgrade pip
+sudo -u $USER $APP_DIR/venv/bin/pip install -r $APP_DIR/ResortApp/requirements.txt
+sudo -u $USER $APP_DIR/venv/bin/pip install gunicorn uvicorn psycopg2-binary
 
 # 5. Permissions & Env
 echo "[5/7] Setting Permissions & Env..."
