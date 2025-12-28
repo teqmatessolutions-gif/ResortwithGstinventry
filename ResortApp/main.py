@@ -90,10 +90,17 @@ app = FastAPI(
 
 @app.on_event("startup")
 async def startup_event():
-    """Start background tasks"""
-    from app.utils.food_scheduler import run_food_scheduler
-    import asyncio
-    asyncio.create_task(run_food_scheduler())
+    """
+    Startup event handler
+    """
+    print("Starting up application...")
+    
+    # Initialize food order scheduler
+    # try:
+    #     asyncio.create_task(run_food_scheduler())
+    #     print("[OK] Food order scheduler started")
+    # except Exception as e:
+    #     print(f"[ERROR] Failed to start food scheduler: {e}")
 
 # Exception handlers for proper error logging and responses
 @app.exception_handler(StarletteHTTPException)
